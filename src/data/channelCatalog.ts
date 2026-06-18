@@ -171,6 +171,12 @@ export const CHANNEL_CATALOG: ChannelCatalogEntry[] = [
     iptvIds: ['HBO.us'],
     titleFallbacks: ['HBO Boxing', 'HBO'],
   },
+  {
+    id: 'rtb-go',
+    name: 'RTB GO Live',
+    category: 'Entertainment',
+    iptvIds: ['RTBGo.bn'],
+  },
 ];
 
 export const WORLD_CUP_CHANNEL_IDS = CHANNEL_CATALOG.filter((c) => c.category === 'Sports').map(

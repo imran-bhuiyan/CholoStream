@@ -73,7 +73,7 @@ function isUsableStreamUrl(url: string): boolean {
     lower.endsWith('.png') ||
     lower.endsWith('.jpg') ||
     lower.endsWith('.css') ||
-    lower.includes('cloudfront.net') ||
+    lower.includes('jmp2.uk') ||
     lower.includes('pages.dev')
   );
 }
