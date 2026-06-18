@@ -1,0 +1,14 @@
+
+> cholostream@0.1.0 dev
+> next dev
+
+▲ Next.js 16.2.9 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.0.2:3000
+✓ Ready in 808ms
+
+Failed to set fetch cache https://iptv-org.github.io/api/streams.json Error: Failed to set Next.js data cache for https://iptv-org.github.io/api/streams.json, items over 2MB can not be cached (4363151 bytes)
+    at ignore-listed frames
+Failed to set fetch cache https://iptv-org.github.io/api/logos.json Error: Failed to set Next.js data cache for https://iptv-org.github.io/api/logos.json, items over 2MB can not be cached (9325024 bytes)
+    at ignore-listed frames
+ GET /api/channels 200 in 1912ms (next.js: 946ms, application-code: 966ms)
