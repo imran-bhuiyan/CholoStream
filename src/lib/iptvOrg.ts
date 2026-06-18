@@ -1,3 +1,6 @@
+import https from 'https';
+// @ts-ignore
+import JSONStream from 'JSONStream';
 import type { Channel, StreamCodec, StreamSource } from '@/types/stream';
 import { CHANNEL_CATALOG } from '@/data/channelCatalog';
 
@@ -25,21 +28,73 @@ type IptvCache = {
 let cache: IptvCache | null = null;
 const CACHE_TTL_MS = 60 * 60 * 1000;
 
+function streamJsonArray<T>(url: string, onData: (item: T) => void): Promise<void> {
+  return new Promise((resolve, reject) => {
+    https.get(url, (res) => {
+      if (res.statusCode !== 200) {
+        return reject(new Error(`Failed to stream ${url}: ${res.statusCode}`));
+      }
+      const parser = JSONStream.parse('*');
+      parser.on('data', onData);
+      parser.on('error', reject);
+      parser.on('end', resolve);
+      res.pipe(parser);
+    }).on('error', reject);
+  });
+}
+
 async function loadIptvData(): Promise<IptvCache> {
   if (cache && Date.now() - cache.fetchedAt < CACHE_TTL_MS) {
     return cache;
   }
 
-  const [streamsRes, logosRes] = await Promise.all([
-    fetch(IPTV_STREAMS_URL, { next: { revalidate: 3600 } }),
-    fetch(IPTV_LOGOS_URL, { next: { revalidate: 3600 } }),
-  ]);
+  const neededIptvIds = new Set<string>();
+  const neededTitleFallbacks = new Set<string>();
 
-  if (!streamsRes.ok || !logosRes.ok) {
-    throw new Error('Failed to load iptv-org channel data');
+  for (const entry of CHANNEL_CATALOG) {
+    entry.iptvIds.forEach(id => neededIptvIds.add(id));
+    entry.titleFallbacks?.forEach(t => neededTitleFallbacks.add(t.toLowerCase()));
   }
 
-  const streams = (await streamsRes.json()) as IptvStream[];
+  const streams: IptvStream[] = [];
+
+  const streamPromise = streamJsonArray<IptvStream>(IPTV_STREAMS_URL, (stream) => {
+    if (stream.channel && neededIptvIds.has(stream.channel)) {
+      streams.push(stream);
+      return;
+    }
+    if (neededTitleFallbacks.size > 0 && stream.title) {
+       const lowerTitle = stream.title.toLowerCase();
+       let matchFound = false;
+       for (const fallback of Array.from(neededTitleFallbacks)) {
+          if (lowerTitle.includes(fallback)) {
+            matchFound = true;
+            break;
+          }
+       }
+       if (matchFound) {
+          streams.push(stream);
+          return;
+       }
+    }
+    if (neededTitleFallbacks.size > 0 && stream.channel) {
+       const lowerChan = stream.channel.toLowerCase();
+       for (const fallback of Array.from(neededTitleFallbacks)) {
+          if (lowerChan.includes(fallback)) {
+             streams.push(stream);
+             return;
+          }
+       }
+    }
+  });
+
+  const logosRes = await fetch(IPTV_LOGOS_URL, { next: { revalidate: 3600 } });
+  if (!logosRes.ok) {
+    throw new Error('Failed to load iptv-org logos data');
+  }
+
+  await streamPromise;
+
   const logosJson = (await logosRes.json()) as IptvLogo[];
   const logos = new Map<string, string>();
 

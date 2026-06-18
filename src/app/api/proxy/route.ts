@@ -86,6 +86,17 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       contentType.includes('application/x-mpegURL') ||
       contentType.includes('audio/mpegurl');
 
+    const isBinaryChunk =
+      safeTargetUrl.pathname.endsWith('.ts') ||
+      safeTargetUrl.pathname.endsWith('.m4s') ||
+      safeTargetUrl.pathname.endsWith('.mp4') ||
+      contentType.includes('video/mp2t');
+
+    // Bypass proxy for binary video chunks to prevent execution timeouts
+    if (!isManifest && isBinaryChunk) {
+      return NextResponse.redirect(safeTargetUrl.href, { status: 302 });
+    }
+
     const origin = new URL(request.url).origin;
 
     if (isManifest) {
@@ -95,9 +106,30 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
       const rewrittenLines = lines.map((line) => {
         const trimmed = line.trim();
-        if (!trimmed || trimmed.startsWith('#')) {
+        if (!trimmed) {
           return line;
         }
+
+        // Rewrite inline URI values in tags like #EXT-X-KEY or #EXT-X-MEDIA
+        if (trimmed.startsWith('#EXT-X-')) {
+          return trimmed.replace(/(URI=")([^"]+)(")/gi, (match, p1, p2, p3) => {
+            try {
+              const absoluteUrl = new URL(p2, baseUrl).href;
+              if (isSafeTargetUrl(absoluteUrl)) {
+                return `${p1}${origin}/api/proxy?url=${encodeURIComponent(absoluteUrl)}${p3}`;
+              }
+            } catch {
+              // ignore invalid url
+            }
+            return match;
+          });
+        }
+
+        if (trimmed.startsWith('#')) {
+          return line;
+        }
+
+        // Rewrite segment/track URLs
         try {
           const absoluteUrl = new URL(trimmed, baseUrl).href;
           return isSafeTargetUrl(absoluteUrl)
