@@ -1,5 +1,5 @@
 import https from 'https';
-// @ts-ignore
+// @ts-expect-error JSONStream lacks types
 import JSONStream from 'JSONStream';
 import type { Channel, StreamCodec, StreamSource } from '@/types/stream';
 import { CHANNEL_CATALOG } from '@/data/channelCatalog';
@@ -48,10 +48,15 @@ async function loadIptvData(): Promise<IptvCache> {
     return cache;
   }
 
-  const [streamsRes, logosRes] = await Promise.all([
-    fetch(IPTV_STREAMS_URL, { cache: 'no-store' }),
-    fetch(IPTV_LOGOS_URL, { cache: 'no-store' }),
-  ]);
+  const neededIptvIds = new Set<string>();
+  const neededTitleFallbacks = new Set<string>();
+
+  for (const entry of CHANNEL_CATALOG) {
+    entry.iptvIds.forEach(id => neededIptvIds.add(id));
+    entry.titleFallbacks?.forEach(t => neededTitleFallbacks.add(t.toLowerCase()));
+  }
+
+  const streams: IptvStream[] = [];
 
   const streamPromise = streamJsonArray<IptvStream>(IPTV_STREAMS_URL, (stream) => {
     if (stream.channel && neededIptvIds.has(stream.channel)) {
@@ -83,14 +88,14 @@ async function loadIptvData(): Promise<IptvCache> {
     }
   });
 
-  const logosRes = await fetch(IPTV_LOGOS_URL, { next: { revalidate: 3600 } });
-  if (!logosRes.ok) {
+  const logosResponse = await fetch(IPTV_LOGOS_URL, { next: { revalidate: 3600 } });
+  if (!logosResponse.ok) {
     throw new Error('Failed to load iptv-org logos data');
   }
 
   await streamPromise;
 
-  const logosJson = (await logosRes.json()) as IptvLogo[];
+  const logosJson = (await logosResponse.json()) as IptvLogo[];
   const logos = new Map<string, string>();
 
   for (const logo of logosJson) {
@@ -169,13 +174,13 @@ function resolveStreamsForIds(
   }
 
   for (const title of titleFallbacks) {
-    const titleRegex = new RegExp(`\\b${title}\\b`, 'i');
+    const lowerTitle = title.toLowerCase();
     const candidates = streams
       .filter(
         (s) =>
           isUsableStreamUrl(s.url) &&
-          (titleRegex.test(s.title || '') ||
-            titleRegex.test(s.channel || ''))
+          (s.title?.toLowerCase().includes(lowerTitle) ||
+            s.channel?.toLowerCase().includes(lowerTitle))
       )
       .sort((a, b) => scoreStream(b) - scoreStream(a));
 
