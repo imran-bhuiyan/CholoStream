@@ -107,12 +107,20 @@ export default function UnifiedPlayer({ sources, channelName }: UnifiedPlayerPro
 
     const cleanup = () => {
       if (hlsRef.current) {
+        hlsRef.current.detachMedia();
         hlsRef.current.destroy();
         hlsRef.current = null;
       }
       if (mpegtsRef.current) {
+        mpegtsRef.current.unload();
+        mpegtsRef.current.detachMediaElement();
         mpegtsRef.current.destroy();
         mpegtsRef.current = null;
+      }
+      if (videoRef.current) {
+        videoRef.current.pause();
+        videoRef.current.removeAttribute('src');
+        videoRef.current.load();
       }
     };
 
