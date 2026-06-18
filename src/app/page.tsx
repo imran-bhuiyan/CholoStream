@@ -17,11 +17,14 @@ export default function Home() {
 
   useEffect(() => {
     if (!channels.length) return;
-    setSelectedChannelId((current) => {
-      if (current && channels.some((c) => c.id === current)) return current;
-      return channels[0]?.id ?? null;
-    });
-  }, [channels]);
+    const hasCurrent = selectedChannelId && channels.some((c) => c.id === selectedChannelId);
+    if (!hasCurrent) {
+      const timeoutId = setTimeout(() => {
+        setSelectedChannelId(channels[0]?.id ?? null);
+      }, 0);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [channels, selectedChannelId]);
 
   const activeChannel = useMemo(() => {
     if (!channels.length) return null;

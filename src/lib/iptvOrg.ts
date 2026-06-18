@@ -53,9 +53,13 @@ async function loadIptvData(): Promise<IptvCache> {
   return cache;
 }
 
-function inferCodec(url: string): StreamCodec {
+function inferCodec(url: string, stream?: IptvStream): StreamCodec {
   const lower = url.toLowerCase();
   if (lower.includes('.ts') && !lower.includes('.m3u8')) return 'MPEGTS';
+  // Check if we can identify HEVC
+  if (lower.includes('hevc') || lower.includes('h265') || (stream && stream.quality && stream.quality.toLowerCase().includes('hevc'))) {
+    return 'HEVC';
+  }
   return 'AVC';
 }
 
@@ -68,7 +72,9 @@ function isUsableStreamUrl(url: string): boolean {
     lower.endsWith('.ttf') ||
     lower.endsWith('.png') ||
     lower.endsWith('.jpg') ||
-    lower.endsWith('.css')
+    lower.endsWith('.css') ||
+    lower.includes('cloudfront.net') ||
+    lower.includes('pages.dev')
   );
 }
 
@@ -79,6 +85,11 @@ function scoreStream(stream: IptvStream): number {
   if (stream.quality === '1080p') score += 2;
   if (stream.quality === '720p') score += 1;
   if (stream.url.includes('cors-proxy')) score -= 1;
+
+  // Penalize HEVC
+  if (stream.url.toLowerCase().includes('hevc') || stream.url.toLowerCase().includes('h265') || (stream.quality && stream.quality.toLowerCase().includes('hevc'))) {
+    score -= 5;
+  }
   return score;
 }
 
@@ -100,7 +111,7 @@ function resolveStreamsForIds(
       seen.add(candidate.url);
       resolved.push({
         url: candidate.url,
-        codec: inferCodec(candidate.url),
+        codec: inferCodec(candidate.url, candidate),
         isBackup: resolved.length > 0,
       });
       if (resolved.length >= 3) return resolved;
@@ -123,7 +134,7 @@ function resolveStreamsForIds(
       seen.add(candidate.url);
       resolved.push({
         url: candidate.url,
-        codec: inferCodec(candidate.url),
+        codec: inferCodec(candidate.url, candidate),
         isBackup: resolved.length > 0,
       });
       if (resolved.length >= 3) return resolved;
