@@ -48,15 +48,10 @@ async function loadIptvData(): Promise<IptvCache> {
     return cache;
   }
 
-  const neededIptvIds = new Set<string>();
-  const neededTitleFallbacks = new Set<string>();
-
-  for (const entry of CHANNEL_CATALOG) {
-    entry.iptvIds.forEach(id => neededIptvIds.add(id));
-    entry.titleFallbacks?.forEach(t => neededTitleFallbacks.add(t.toLowerCase()));
-  }
-
-  const streams: IptvStream[] = [];
+  const [streamsRes, logosRes] = await Promise.all([
+    fetch(IPTV_STREAMS_URL, { cache: 'no-store' }),
+    fetch(IPTV_LOGOS_URL, { cache: 'no-store' }),
+  ]);
 
   const streamPromise = streamJsonArray<IptvStream>(IPTV_STREAMS_URL, (stream) => {
     if (stream.channel && neededIptvIds.has(stream.channel)) {
@@ -174,13 +169,13 @@ function resolveStreamsForIds(
   }
 
   for (const title of titleFallbacks) {
-    const lowerTitle = title.toLowerCase();
+    const titleRegex = new RegExp(`\\b${title}\\b`, 'i');
     const candidates = streams
       .filter(
         (s) =>
           isUsableStreamUrl(s.url) &&
-          (s.title?.toLowerCase().includes(lowerTitle) ||
-            s.channel?.toLowerCase().includes(lowerTitle))
+          (titleRegex.test(s.title || '') ||
+            titleRegex.test(s.channel || ''))
       )
       .sort((a, b) => scoreStream(b) - scoreStream(a));
 
