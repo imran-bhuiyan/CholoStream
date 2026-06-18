@@ -195,7 +195,7 @@ export default function UnifiedPlayer({ sources, channelName }: UnifiedPlayerPro
               type: 'mse',
               url: streamUrl,
               isLive: true,
-              hasAudio: hasAudioState,
+              hasAudio: true,
             }, {
               enableStashBuffer: false,
               liveBufferLatencyChasing: true,
