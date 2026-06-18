@@ -1,21 +1,5 @@
 import type { MatchSchedule } from '@/types/stream';
-
-const WORLD_CUP_CHANNEL_IDS = [
-  'fifa-wc',
-  'bein-sports-1',
-  'bein-sports-2',
-  'tsn-1',
-  'tsn-2',
-  'win-sports',
-  'fussball-tv',
-  'caze-tv',
-  'tyc-sports',
-  'd-sports',
-  'eurosport',
-  'sky-sports-football',
-  'espn',
-  'fox-sports',
-];
+import { WORLD_CUP_CHANNEL_IDS } from './channelCatalog';
 
 const channelForMatch = (index: number) =>
   WORLD_CUP_CHANNEL_IDS[index % WORLD_CUP_CHANNEL_IDS.length];

@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import Image from 'next/image';
 import type { Channel, StreamSource } from '@/types/stream';
 import { Search, Star, Tv, Award, Radio, Film, Globe } from 'lucide-react';
+import ChannelLogo from './ChannelLogo';
 
 interface ChannelGridProps {
   channels: Channel[];
@@ -154,13 +154,7 @@ export default function ChannelGrid({
                   `}
                 >
                   <div className="flex items-center space-x-2.5 min-w-0">
-                    <Image
-                      src={channel.logoUrl} 
-                      alt={channel.name} 
-                      width={32}
-                      height={32}
-                      className="w-8 h-8 rounded-lg object-cover border border-slate-800"
-                    />
+                    <ChannelLogo channel={channel} size={32} className="rounded-lg" />
                     <div className="min-w-0">
                       <h5 className="text-[11px] font-bold truncate pr-3">{channel.name}</h5>
                       <span className="text-[9px] text-slate-500 font-semibold">{channel.category}</span>
@@ -214,13 +208,7 @@ export default function ChannelGrid({
                 >
                   <div className="flex items-center space-x-3 min-w-0">
                     <div className="relative flex-shrink-0">
-                      <Image
-                        src={channel.logoUrl}
-                        alt={channel.name}
-                        width={36}
-                        height={36}
-                        className="w-9 h-9 rounded-xl object-cover border border-slate-800"
-                      />
+                      <ChannelLogo channel={channel} size={36} className="rounded-xl" />
                       {isSelected && (
                         <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-[#0a0c10] rounded-full" />
                       )}

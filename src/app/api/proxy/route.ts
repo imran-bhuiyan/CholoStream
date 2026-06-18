@@ -1,17 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { CHANNELS } from '@/data/mockChannels';
-
-const ALLOWED_STREAM_HOSTS = new Set(
-  CHANNELS.flatMap((channel) => channel.sources)
-    .map((source) => {
-      try {
-        return new URL(source.url).hostname;
-      } catch {
-        return '';
-      }
-    })
-    .filter(Boolean)
-);
 
 const PRIVATE_HOST_PATTERNS = [
   /^localhost$/i,
@@ -29,9 +16,8 @@ function isSafeTargetUrl(value: string): URL | null {
     const url = new URL(value);
     const isHttp = url.protocol === 'http:' || url.protocol === 'https:';
     const isPrivateHost = PRIVATE_HOST_PATTERNS.some((pattern) => pattern.test(url.hostname));
-    const isKnownHost = ALLOWED_STREAM_HOSTS.has(url.hostname);
 
-    if (!isHttp || isPrivateHost || !isKnownHost) {
+    if (!isHttp || isPrivateHost) {
       return null;
     }
 
@@ -69,7 +55,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   try {
     const requestHeaders = new Headers({
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+      'User-Agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     });
     const range = request.headers.get('range');
 
@@ -93,10 +80,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }
 
     const contentType = response.headers.get('content-type') || '';
-    const isManifest = safeTargetUrl.pathname.includes('.m3u8') || 
-                       contentType.includes('mpegurl') || 
-                       contentType.includes('application/x-mpegURL') ||
-                       contentType.includes('audio/mpegurl');
+    const isManifest =
+      safeTargetUrl.pathname.includes('.m3u8') ||
+      contentType.includes('mpegurl') ||
+      contentType.includes('application/x-mpegURL') ||
+      contentType.includes('audio/mpegurl');
 
     const origin = new URL(request.url).origin;
 
@@ -105,13 +93,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       const lines = text.split('\n');
       const baseUrl = response.url || safeTargetUrl.href;
 
-      const rewrittenLines = lines.map(line => {
+      const rewrittenLines = lines.map((line) => {
         const trimmed = line.trim();
         if (!trimmed || trimmed.startsWith('#')) {
           return line;
         }
         try {
-          // Resolve relative URLs to absolute based on the final redirected URL of the stream
           const absoluteUrl = new URL(trimmed, baseUrl).href;
           return isSafeTargetUrl(absoluteUrl)
             ? `${origin}/api/proxy?url=${encodeURIComponent(absoluteUrl)}`
@@ -139,9 +126,15 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       headers: {
         ...CORS_HEADERS,
         'Content-Type': contentType || 'application/octet-stream',
-        ...(response.headers.get('content-length') ? { 'Content-Length': response.headers.get('content-length') as string } : {}),
-        ...(response.headers.get('content-range') ? { 'Content-Range': response.headers.get('content-range') as string } : {}),
-        ...(response.headers.get('accept-ranges') ? { 'Accept-Ranges': response.headers.get('accept-ranges') as string } : {}),
+        ...(response.headers.get('content-length')
+          ? { 'Content-Length': response.headers.get('content-length') as string }
+          : {}),
+        ...(response.headers.get('content-range')
+          ? { 'Content-Range': response.headers.get('content-range') as string }
+          : {}),
+        ...(response.headers.get('accept-ranges')
+          ? { 'Accept-Ranges': response.headers.get('accept-ranges') as string }
+          : {}),
       },
     });
   } catch (error: unknown) {
@@ -155,7 +148,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   }
 }
 
-// Support preflight OPTIONS requests
 export async function OPTIONS(): Promise<NextResponse> {
   return new NextResponse(null, {
     status: 204,
