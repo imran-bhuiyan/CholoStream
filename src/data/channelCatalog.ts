@@ -16,8 +16,7 @@ export const CHANNEL_CATALOG: ChannelCatalogEntry[] = [
     id: 'fifa-wc',
     name: 'FIFA World Cup TV',
     category: 'Sports',
-    iptvIds: ['FIFAPlus.uk', 'FIFAPlusWomen.uk', 'FIFA.tv'],
-    titleFallbacks: ['FIFA', 'World Cup'],
+    iptvIds: ['FIFAPlus.uk', 'FIFAPlusWomen.uk'],
   },
   {
     id: 'bein-sports-1',
@@ -170,7 +169,7 @@ export const CHANNEL_CATALOG: ChannelCatalogEntry[] = [
     name: 'HBO Movies',
     category: 'Entertainment',
     iptvIds: ['HBO.us'],
-    titleFallbacks: ['HBO Movies', 'HBO'],
+    titleFallbacks: ['HBO Boxing', 'HBO'],
   },
   {
     id: 'rtb-go',

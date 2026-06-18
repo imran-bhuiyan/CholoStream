@@ -168,13 +168,7 @@ export default function UnifiedPlayer({ sources, channelName }: UnifiedPlayerPro
               addLog(`HLS error: ${data.details}`, 'error');
               switch (data.type) {
                 case HlsClass.ErrorTypes.NETWORK_ERROR:
-                  if (data.details.toLowerCase().includes('subtitle')) {
-                    addLog('Subtitle network error. Disabling subtitles and recovering...', 'warn');
-                    hls.subtitleTrack = -1;
-                    hls.startLoad();
-                  } else {
-                    selectNextSource(`Fatal HLS network error: ${data.details}`);
-                  }
+                  selectNextSource(`Fatal HLS network error: ${data.details}`);
                   break;
                 case HlsClass.ErrorTypes.MEDIA_ERROR:
                   addLog('Recovering from media error...', 'warn');
