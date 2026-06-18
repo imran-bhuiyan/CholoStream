@@ -88,21 +88,17 @@ async function loadIptvData(): Promise<IptvCache> {
     }
   });
 
-  const logosResponse = await fetch(IPTV_LOGOS_URL, { next: { revalidate: 3600 } });
-  if (!logosResponse.ok) {
-    throw new Error('Failed to load iptv-org logos data');
-  }
-
-  await streamPromise;
-
-  const logosJson = (await logosResponse.json()) as IptvLogo[];
   const logos = new Map<string, string>();
 
-  for (const logo of logosJson) {
-    if (!logos.has(logo.channel)) {
-      logos.set(logo.channel, logo.url);
+  const logosPromise = streamJsonArray<IptvLogo>(IPTV_LOGOS_URL, (logo) => {
+    if (logo.channel && neededIptvIds.has(logo.channel)) {
+      if (!logos.has(logo.channel)) {
+        logos.set(logo.channel, logo.url);
+      }
     }
-  }
+  });
+
+  await Promise.all([streamPromise, logosPromise]);
 
   cache = { streams, logos, fetchedAt: Date.now() };
   return cache;
