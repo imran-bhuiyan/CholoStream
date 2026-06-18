@@ -112,6 +112,7 @@ export default function UnifiedPlayer({ sources, channelName }: UnifiedPlayerPro
         hlsRef.current = null;
       }
       if (mpegtsRef.current) {
+        mpegtsRef.current.pause();
         mpegtsRef.current.unload();
         mpegtsRef.current.detachMediaElement();
         mpegtsRef.current.destroy();
@@ -288,16 +289,32 @@ export default function UnifiedPlayer({ sources, channelName }: UnifiedPlayerPro
     const video = videoRef.current;
     if (!video) return;
     if (isPlaying) {
-      video.pause();
+      if (mpegtsRef.current) mpegtsRef.current.pause();
+      else video.pause();
       setIsPlaying(false);
       addLog('Stream paused by user.', 'info');
     } else {
-      video.play()
-        .then(() => {
+      if (mpegtsRef.current) {
+        const playPromise = mpegtsRef.current.play();
+        if (playPromise) {
+          playPromise
+            .then(() => {
+              setIsPlaying(true);
+              addLog('Stream resumed by user.', 'info');
+            })
+            .catch((e: Error) => addLog(`Play action failed: ${e.message}`, 'error'));
+        } else {
           setIsPlaying(true);
           addLog('Stream resumed by user.', 'info');
-        })
-        .catch((e: Error) => addLog(`Play action failed: ${e.message}`, 'error'));
+        }
+      } else {
+        video.play()
+          .then(() => {
+            setIsPlaying(true);
+            addLog('Stream resumed by user.', 'info');
+          })
+          .catch((e: Error) => addLog(`Play action failed: ${e.message}`, 'error'));
+      }
     }
   };
 
@@ -307,16 +324,24 @@ export default function UnifiedPlayer({ sources, channelName }: UnifiedPlayerPro
     if (video) {
       video.volume = val;
       video.muted = val === 0;
-      setVolume(val);
-      setIsMuted(val === 0);
     }
+    if (mpegtsRef.current) {
+      mpegtsRef.current.volume = val;
+      mpegtsRef.current.muted = val === 0;
+    }
+    setVolume(val);
+    setIsMuted(val === 0);
   };
 
   const toggleMute = () => {
     const video = videoRef.current;
-    if (!video) return;
     const nextMute = !isMuted;
-    video.muted = nextMute;
+    if (video) {
+      video.muted = nextMute;
+    }
+    if (mpegtsRef.current) {
+      mpegtsRef.current.muted = nextMute;
+    }
     setIsMuted(nextMute);
     addLog(nextMute ? 'Muted.' : 'Unmuted.', 'info');
   };
