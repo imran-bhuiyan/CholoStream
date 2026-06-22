@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "CholoStream | Live Sports & TV Streaming Dashboard",
-  description: "Stream high-definition live channels, watch football leagues, track scores, and stay updated with real-time match schedules.",
+  title: "Soccerlit | Live Sports & TV Streaming Dashboard",
+  description: "Stream live IPTV channels, watch the FIFA World Cup 2026, track scores, and view match schedules.",
 };
 
 import QueryProvider from "@/providers/QueryProvider";
+import ErrorBoundary from "@/components/ui/ErrorBoundary";
 
 export default function RootLayout({
   children,
@@ -19,7 +20,9 @@ export default function RootLayout({
       className="h-full antialiased"
     >
       <body className="min-h-full flex flex-col bg-[#06070a] text-slate-100">
-        <QueryProvider>{children}</QueryProvider>
+        <ErrorBoundary>
+          <QueryProvider>{children}</QueryProvider>
+        </ErrorBoundary>
       </body>
     </html>
   );

@@ -78,6 +78,19 @@ export function usePlayerDiagnostics({
     }
 
     checkIntervalRef.current = setInterval(() => {
+      // Bypass checks when the document is hidden (tab switched or minimized)
+      // because the browser suspends frame rendering, which causes false-positive stalls.
+      if (typeof document !== 'undefined' && document.hidden) {
+        lastTimeRef.current = video.currentTime;
+        if (typeof video.getVideoPlaybackQuality === 'function') {
+          lastFrameCountRef.current = video.getVideoPlaybackQuality().totalVideoFrames;
+        } else if ('webkitDecodedFrameCount' in video) {
+          lastFrameCountRef.current = (video as unknown as { webkitDecodedFrameCount: number }).webkitDecodedFrameCount;
+        }
+        consecutiveStallsRef.current = 0;
+        return;
+      }
+
       if (video.paused || video.ended) return;
 
       const currentTime = video.currentTime;

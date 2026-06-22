@@ -1,5 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// Simple in-memory rate limiter
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX = 30;
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
+
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return true;
+  }
+
+  if (entry.count >= RATE_LIMIT_MAX) return false;
+  entry.count++;
+  return true;
+}
+
+// Clean up stale entries periodically
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, value] of rateLimitMap) {
+    if (now > value.resetAt) rateLimitMap.delete(key);
+  }
+}, 60_000);
+
 const PRIVATE_HOST_PATTERNS = [
   /^localhost$/i,
   /^127\./,
@@ -37,6 +64,15 @@ const CORS_HEADERS = {
 const STREAM_FETCH_TIMEOUT_MS = 15000;
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
+  const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+
+  if (!checkRateLimit(clientIp)) {
+    return new NextResponse('Rate limit exceeded. Try again later.', {
+      status: 429,
+      headers: { ...CORS_HEADERS, 'Retry-After': '60' },
+    });
+  }
+
   const { searchParams } = new URL(request.url);
   const targetUrl = searchParams.get('url');
 

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { MATCH_SCHEDULE } from '@/data/mockChannels';
+import { MATCH_SCHEDULE } from '@/data/worldCup2026Schedule';
 import type { Channel } from '@/types/stream';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import ChannelGrid from '@/components/dashboard/ChannelGrid';
@@ -9,7 +9,8 @@ import UnifiedPlayer from '@/components/video/UnifiedPlayer';
 import LiveScores from '@/components/LiveScores';
 import MatchScheduleList from '@/components/schedule/MatchScheduleList';
 import { useChannels } from '@/hooks/useChannels';
-import { Info, Loader2, Radio, RefreshCw } from 'lucide-react';
+import { Info, Radio, RefreshCw } from 'lucide-react';
+import { PlayerSkeleton, ChannelSkeleton, ScoresSkeleton, ScheduleSkeleton } from '@/components/ui/Skeleton';
 
 export default function Home() {
   const { data: channels = [], isLoading, isError, error, refetch, isFetching } = useChannels();
@@ -38,10 +39,7 @@ export default function Home() {
   };
 
   const sidebarSlot = isLoading ? (
-    <div className="flex flex-col items-center justify-center h-full min-h-[300px] text-slate-500 space-y-3">
-      <Loader2 className="h-8 w-8 animate-spin text-violet-500" />
-      <p className="text-xs font-semibold">Loading channels from iptv-org…</p>
-    </div>
+    <ChannelSkeleton />
   ) : isError ? (
     <div className="flex flex-col items-center justify-center h-full min-h-[300px] text-center p-6 space-y-3">
       <p className="text-xs text-rose-400 font-semibold">
@@ -69,13 +67,17 @@ export default function Home() {
       sources={activeChannel.sources}
       channelName={activeChannel.name}
     />
+  ) : isFetching ? (
+    <PlayerSkeleton />
   ) : (
     <div className="flex items-center justify-center h-full min-h-[300px] text-slate-500 text-sm">
-      {isFetching ? 'Refreshing channel list…' : 'Select a channel to start streaming'}
+      Select a channel to start streaming
     </div>
   );
 
-  const scoresSlot = channels.length > 0 ? (
+  const scoresSlot = isLoading ? (
+    <ScoresSkeleton />
+  ) : channels.length > 0 ? (
     <LiveScores
       matches={MATCH_SCHEDULE}
       channels={channels}
@@ -83,7 +85,9 @@ export default function Home() {
     />
   ) : null;
 
-  const scheduleSlot = channels.length > 0 ? (
+  const scheduleSlot = isLoading ? (
+    <ScheduleSkeleton />
+  ) : channels.length > 0 ? (
     <MatchScheduleList
       matches={MATCH_SCHEDULE}
       channels={channels}
@@ -92,8 +96,8 @@ export default function Home() {
   ) : null;
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#06070a] text-slate-100">
-      <header className="h-16 border-b border-slate-800/60 bg-[#08090d]/80 backdrop-blur-md sticky top-0 z-40 px-4 md:px-8 flex items-center justify-between">
+    <div className="flex flex-col min-h-screen bg-[#090a0f] text-slate-100">
+      <header className="h-16 border-b border-white/5 bg-[#090a0f]/80 backdrop-blur-md sticky top-0 z-40 px-4 md:px-8 flex items-center justify-between">
         <div className="flex items-center space-x-3">
           <div className="bg-violet-600/10 p-2 rounded-xl border border-violet-500/25 flex items-center justify-center">
             <Radio className="h-5 w-5 text-violet-400 animate-pulse" />
@@ -101,7 +105,7 @@ export default function Home() {
           <div className="flex flex-col">
             <h1 className="text-sm font-extrabold text-slate-100 tracking-wide flex items-center space-x-2">
               <span className="font-extrabold text-lg text-slate-100 tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
-                CholoStream
+                Soccerlit
               </span>
             </h1>
             <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-widest mt-0.5">
@@ -110,7 +114,7 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="hidden md:flex items-center space-x-3 text-xs text-slate-400 font-semibold bg-[#121620]/60 px-3 py-1.5 rounded-xl border border-slate-800/60">
+        <div className="hidden md:flex items-center space-x-3 text-xs text-slate-400 font-semibold bg-[#11131a] px-3 py-1.5 rounded-xl border border-white/5 shadow-inner">
           <Info className="h-4 w-4 text-violet-400" />
           <span>H.264 Fallback & Audio Repair Enabled</span>
         </div>

@@ -92,7 +92,7 @@ export default function ChannelGrid({
   }, [filteredChannels, favorites]);
 
   return (
-    <div className="space-y-6 flex flex-col h-full bg-[#0a0c10] p-4 rounded-2xl border border-slate-850">
+    <div className="space-y-6 flex flex-col h-full w-full">
       
       {/* Controls: Search and Categories */}
       <div className="space-y-4">
@@ -146,10 +146,10 @@ export default function ChannelGrid({
                   key={channel.id}
                   onClick={() => onSelectChannel(channel.id)}
                   className={`
-                    flex items-center justify-between p-2.5 rounded-xl border cursor-pointer transition-all duration-250 select-none relative overflow-hidden group
+                    flex items-center justify-between p-3 rounded-2xl border cursor-pointer transition-all duration-300 select-none relative overflow-hidden group
                     ${isSelected 
-                      ? 'bg-violet-600/10 border-violet-550/45 text-white shadow-lg shadow-violet-650/5' 
-                      : 'bg-[#121620]/60 border-slate-800 hover:border-slate-700 text-slate-400 hover:text-slate-200'
+                      ? 'bg-violet-600/20 border-violet-500/50 text-white shadow-[0_0_15px_rgba(124,58,237,0.3)] scale-[1.02] z-10' 
+                      : 'bg-white/[0.02] border-white/5 hover:border-white/10 hover:bg-white/[0.04] text-slate-400 hover:text-slate-200 hover:scale-[1.01]'
                     }
                   `}
                 >
@@ -199,10 +199,10 @@ export default function ChannelGrid({
                   key={channel.id}
                   onClick={() => onSelectChannel(channel.id)}
                   className={`
-                    w-full flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all duration-200 group text-left select-none relative overflow-hidden
+                    w-full flex items-center justify-between p-3 rounded-2xl border cursor-pointer transition-all duration-300 group text-left select-none relative overflow-hidden
                     ${isSelected 
-                      ? 'bg-violet-600/10 border-violet-550/30 text-white shadow-lg shadow-violet-650/5' 
-                      : 'bg-[#121620]/30 border-transparent hover:border-slate-800 text-slate-400 hover:text-slate-200'
+                      ? 'bg-violet-600/20 border-violet-500/50 text-white shadow-[0_0_15px_rgba(124,58,237,0.3)] scale-[1.02] z-10' 
+                      : 'bg-white/[0.02] border-white/5 hover:border-white/10 hover:bg-white/[0.04] text-slate-400 hover:text-slate-200 hover:scale-[1.01]'
                     }
                   `}
                 >

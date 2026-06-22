@@ -79,7 +79,7 @@ export default function MatchScheduleList({
   };
 
   return (
-    <div className="bg-[#0a0c10] border border-slate-850 rounded-2xl p-4 flex flex-col h-full min-h-[400px]">
+    <div className="flex flex-col h-full w-full">
       
       {/* Header and Filter Tabs */}
       <div className="flex flex-col gap-3 pb-3 border-b border-slate-800/80">
@@ -120,10 +120,9 @@ export default function MatchScheduleList({
         />
       </div>
 
-      {/* Scrollable grid of items */}
       <div 
         ref={parentRef}
-        className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-900 scrollbar-track-transparent rounded-xl border border-slate-850 bg-[#08090d] min-h-0"
+        className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent rounded-xl border border-white/5 bg-[#11131a] min-h-0 mt-2"
       >
         {filteredMatches.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center py-12">

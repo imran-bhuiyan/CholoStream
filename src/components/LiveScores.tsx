@@ -35,7 +35,7 @@ export const getTeamFlag = (teamName: string) => {
     'Czechia': 'CZ',
     'Ecuador': 'EC',
     'Egypt': 'EG',
-    'England': 'GB',
+    'England': 'GB-ENG',
     'France': 'FR',
     'Germany': 'DE',
     'Ghana': 'GH',
@@ -55,7 +55,7 @@ export const getTeamFlag = (teamName: string) => {
     'Portugal': 'PT',
     'Qatar': 'QA',
     'Saudi Arabia': 'SA',
-    'Scotland': 'GB',
+    'Scotland': 'GB-SCT',
     'Senegal': 'SN',
     'South Africa': 'ZA',
     'Spain': 'ES',
@@ -107,9 +107,9 @@ export default function LiveScores({ matches, channels, onSelectChannel }: LiveS
     <div
       key={match.id}
       onClick={() => match.channelId && onSelectChannel(match.channelId)}
-      className={`group relative bg-[#0d0f14] border border-slate-800 rounded-2xl p-4 transition-all duration-300 overflow-hidden ${
+      className={`group relative bg-[#151821] border border-white/5 rounded-2xl p-4 transition-all duration-300 overflow-hidden ${
         match.channelId
-          ? 'cursor-pointer hover:border-violet-500/40 hover:shadow-[0_0_20px_rgba(124,58,237,0.1)]'
+          ? 'cursor-pointer hover:border-white/10 hover:shadow-2xl hover:-translate-y-1'
           : 'cursor-default'
       }`}
     >

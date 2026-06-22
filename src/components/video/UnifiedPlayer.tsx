@@ -9,7 +9,7 @@ import { usePlayerDiagnostics } from '@/hooks/usePlayerDiagnostics';
 import { 
   Play, Pause, Volume2, VolumeX, Maximize, Minimize, 
   Tv, RefreshCw, AlertTriangle, Cpu, Activity,
-  Globe
+  Globe, ChevronDown, ChevronUp
 } from 'lucide-react';
 
 interface UnifiedPlayerProps {
@@ -38,6 +38,7 @@ export default function UnifiedPlayer({ sources, channelName }: UnifiedPlayerPro
   const [alertMessage, setAlertMessage] = useState<string | null>(null);
   const [playerError, setPlayerError] = useState<string | null>(null);
   const [showControls, setShowControls] = useState(true);
+  const [logCollapsed, setLogCollapsed] = useState(false);
 
   // Dynamic libraries references
   const hlsRef = useRef<Hls | null>(null);
@@ -152,6 +153,7 @@ export default function UnifiedPlayer({ sources, channelName }: UnifiedPlayerPro
       try {
         if (isM3u8) {
           const HlsClass = (await import('hls.js')).default;
+          if (isDestroyed) return;
           if (HlsClass.isSupported()) {
             const hls = new HlsClass({
               maxBufferLength: 8,
@@ -197,6 +199,7 @@ export default function UnifiedPlayer({ sources, channelName }: UnifiedPlayerPro
           }
         } else if (isMpegTs) {
           const mpegtsClass = (await import('mpegts.js')).default;
+          if (isDestroyed) return;
           if (mpegtsClass.getFeatureList().mseLivePlayback) {
             addLog(`MPEG-TS: Loading MSE player (Audio: ${hasAudioState ? 'ON' : 'OFF'})`, 'info');
             
@@ -285,7 +288,7 @@ export default function UnifiedPlayer({ sources, channelName }: UnifiedPlayerPro
     };
   }, []);
 
-  const togglePlay = () => {
+  const togglePlay = useCallback(() => {
     const video = videoRef.current;
     if (!video) return;
     if (isPlaying) {
@@ -316,9 +319,9 @@ export default function UnifiedPlayer({ sources, channelName }: UnifiedPlayerPro
           .catch((e: Error) => addLog(`Play action failed: ${e.message}`, 'error'));
       }
     }
-  };
+  }, [isPlaying, addLog]);
 
-  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleVolumeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const val = parseFloat(e.target.value);
     const video = videoRef.current;
     if (video) {
@@ -331,9 +334,9 @@ export default function UnifiedPlayer({ sources, channelName }: UnifiedPlayerPro
     }
     setVolume(val);
     setIsMuted(val === 0);
-  };
+  }, []);
 
-  const toggleMute = () => {
+  const toggleMute = useCallback(() => {
     const video = videoRef.current;
     const nextMute = !isMuted;
     if (video) {
@@ -344,9 +347,9 @@ export default function UnifiedPlayer({ sources, channelName }: UnifiedPlayerPro
     }
     setIsMuted(nextMute);
     addLog(nextMute ? 'Muted.' : 'Unmuted.', 'info');
-  };
+  }, [isMuted, addLog]);
 
-  const toggleFullscreen = () => {
+  const toggleFullscreen = useCallback(() => {
     const container = containerRef.current;
     if (!container) return;
 
@@ -359,9 +362,9 @@ export default function UnifiedPlayer({ sources, channelName }: UnifiedPlayerPro
         .then(() => setIsFullscreen(false))
         .catch(() => {});
     }
-  };
+  }, [addLog]);
 
-  const togglePip = () => {
+  const togglePip = useCallback(() => {
     const video = videoRef.current;
     if (!video) return;
 
@@ -372,14 +375,48 @@ export default function UnifiedPlayer({ sources, channelName }: UnifiedPlayerPro
         addLog(`PiP failed: ${err.message}`, 'error');
       });
     }
-  };
+  }, [addLog]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      switch (e.key.toLowerCase()) {
+        case ' ':
+          e.preventDefault();
+          togglePlay();
+          break;
+        case 'm':
+          toggleMute();
+          break;
+        case 'f':
+          toggleFullscreen();
+          break;
+        case 'p':
+          togglePip();
+          break;
+        case 'arrowup':
+          e.preventDefault();
+          handleVolumeChange({ target: { value: String(Math.min(1, volume + 0.1)) } } as React.ChangeEvent<HTMLInputElement>);
+          break;
+        case 'arrowdown':
+          e.preventDefault();
+          handleVolumeChange({ target: { value: String(Math.max(0, volume - 0.1)) } } as React.ChangeEvent<HTMLInputElement>);
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [volume, togglePlay, toggleMute, toggleFullscreen, togglePip, handleVolumeChange]);
 
   return (
     <div 
       ref={containerRef}
       onMouseMove={handleMouseMove}
       onMouseLeave={() => isPlaying && setShowControls(false)}
-      className="flex flex-col w-full bg-[#0d0f14] rounded-2xl overflow-hidden border border-slate-800 shadow-2xl transition-all duration-300 hover:border-violet-500/30"
+      className="flex flex-col w-full h-full"
     >
       {/* Video element container */}
       <div className="relative aspect-video w-full bg-black flex items-center justify-center group">
@@ -547,33 +584,49 @@ export default function UnifiedPlayer({ sources, channelName }: UnifiedPlayerPro
       </div>
 
       {/* Real-time debugging and telemetry logs output block */}
-      <div className="border-t border-slate-800 bg-[#07080c] p-4 flex flex-col min-h-[140px] max-h-[180px]">
-        <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-900">
-          <div className="flex items-center space-x-2 text-slate-350">
+      <div className={`border-t border-white/5 bg-black/40 backdrop-blur-md flex flex-col transition-all duration-300 ${logCollapsed ? 'min-h-[40px]' : 'min-h-[140px] max-h-[180px]'}`}>
+        <div className="flex items-center justify-between px-4 py-2 border-b border-white/5">
+          <button
+            onClick={() => setLogCollapsed(!logCollapsed)}
+            className="flex items-center space-x-2 text-slate-350 hover:text-white transition-colors"
+          >
             <Activity className="h-4 w-4 text-violet-500" />
             <h4 className="text-xs font-bold uppercase tracking-wider">Stream Telemetry & logs</h4>
+            {logCollapsed ? <ChevronDown className="h-3 w-3 text-slate-500" /> : <ChevronUp className="h-3 w-3 text-slate-500" />}
+          </button>
+          <div className="flex items-center space-x-3">
+            {logs.length > 0 && (
+              <button
+                onClick={() => setLogs([])}
+                className="text-[10px] text-slate-600 hover:text-slate-400 transition-colors font-mono"
+              >
+                Clear
+              </button>
+            )}
+            <span className="text-[10px] text-slate-500 font-mono">Source {currentSourceIndex + 1}/{sources.length}</span>
           </div>
-          <span className="text-[10px] text-slate-500 font-mono">Active Source: {currentSourceIndex + 1}/{sources.length}</span>
         </div>
 
-        <div className="flex-1 overflow-y-auto space-y-1 font-mono text-[11px] scrollbar-thin scrollbar-thumb-slate-900 scrollbar-track-transparent">
-          {logs.length === 0 ? (
-            <div className="text-slate-600 italic">Initializing media player controls...</div>
-          ) : (
-            logs.map((log, idx) => (
-              <div key={idx} className="flex space-x-2 leading-relaxed">
-                <span className="text-slate-600">[{log.timestamp}]</span>
-                <span className={
-                  log.type === 'success' ? 'text-emerald-450' :
-                  log.type === 'warn' ? 'text-amber-400' :
-                  log.type === 'error' ? 'text-rose-400 font-semibold' : 'text-slate-300'
-                }>
-                  {log.message}
-                </span>
-              </div>
-            ))
-          )}
-        </div>
+        {!logCollapsed && (
+          <div className="flex-1 overflow-y-auto space-y-1 font-mono text-[11px] p-4 scrollbar-thin scrollbar-thumb-slate-900 scrollbar-track-transparent">
+            {logs.length === 0 ? (
+              <div className="text-slate-600 italic">Initializing media player controls...</div>
+            ) : (
+              logs.map((log, idx) => (
+                <div key={idx} className="flex space-x-2 leading-relaxed">
+                  <span className="text-slate-600">[{log.timestamp}]</span>
+                  <span className={
+                    log.type === 'success' ? 'text-emerald-450' :
+                    log.type === 'warn' ? 'text-amber-400' :
+                    log.type === 'error' ? 'text-rose-400 font-semibold' : 'text-slate-300'
+                  }>
+                    {log.message}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

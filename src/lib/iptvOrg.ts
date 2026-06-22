@@ -1,6 +1,3 @@
-import https from 'https';
-// @ts-expect-error JSONStream lacks types
-import JSONStream from 'JSONStream';
 import type { Channel, StreamCodec, StreamSource } from '@/types/stream';
 import { CHANNEL_CATALOG } from '@/data/channelCatalog';
 
@@ -28,21 +25,6 @@ type IptvCache = {
 let cache: IptvCache | null = null;
 const CACHE_TTL_MS = 60 * 60 * 1000;
 
-function streamJsonArray<T>(url: string, onData: (item: T) => void): Promise<void> {
-  return new Promise((resolve, reject) => {
-    https.get(url, (res) => {
-      if (res.statusCode !== 200) {
-        return reject(new Error(`Failed to stream ${url}: ${res.statusCode}`));
-      }
-      const parser = JSONStream.parse('*');
-      parser.on('data', onData);
-      parser.on('error', reject);
-      parser.on('end', resolve);
-      res.pipe(parser);
-    }).on('error', reject);
-  });
-}
-
 async function loadIptvData(): Promise<IptvCache> {
   if (cache && Date.now() - cache.fetchedAt < CACHE_TTL_MS) {
     return cache;
@@ -57,11 +39,17 @@ async function loadIptvData(): Promise<IptvCache> {
   }
 
   const streams: IptvStream[] = [];
+  const logos = new Map<string, string>();
 
-  const streamPromise = streamJsonArray<IptvStream>(IPTV_STREAMS_URL, (stream) => {
+  const streamReq = fetch(IPTV_STREAMS_URL, { cache: 'no-store' }).then(r => r.json() as Promise<IptvStream[]>);
+  const logosReq = fetch(IPTV_LOGOS_URL, { cache: 'no-store' }).then(r => r.json() as Promise<IptvLogo[]>);
+
+  const [allStreams, allLogos] = await Promise.all([streamReq, logosReq]);
+
+  for (const stream of allStreams) {
     if (stream.channel && neededIptvIds.has(stream.channel)) {
       streams.push(stream);
-      return;
+      continue;
     }
     if (neededTitleFallbacks.size > 0 && stream.title) {
        const lowerTitle = stream.title.toLowerCase();
@@ -74,7 +62,7 @@ async function loadIptvData(): Promise<IptvCache> {
        }
        if (matchFound) {
           streams.push(stream);
-          return;
+          continue;
        }
     }
     if (neededTitleFallbacks.size > 0 && stream.channel) {
@@ -82,23 +70,19 @@ async function loadIptvData(): Promise<IptvCache> {
        for (const fallback of Array.from(neededTitleFallbacks)) {
           if (lowerChan.includes(fallback)) {
              streams.push(stream);
-             return;
+             break;
           }
        }
     }
-  });
+  }
 
-  const logos = new Map<string, string>();
-
-  const logosPromise = streamJsonArray<IptvLogo>(IPTV_LOGOS_URL, (logo) => {
+  for (const logo of allLogos) {
     if (logo.channel && neededIptvIds.has(logo.channel)) {
       if (!logos.has(logo.channel)) {
         logos.set(logo.channel, logo.url);
       }
     }
-  });
-
-  await Promise.all([streamPromise, logosPromise]);
+  }
 
   cache = { streams, logos, fetchedAt: Date.now() };
   return cache;
