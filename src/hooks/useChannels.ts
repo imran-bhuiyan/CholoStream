@@ -13,8 +13,12 @@ async function fetchChannels(): Promise<Channel[]> {
   const response = await fetch('/api/channels');
   const data = (await response.json()) as ChannelsResponse;
 
-  if (!response.ok || !data.channels?.length) {
-    throw new Error(data.error || 'No live channels available from iptv-org');
+  if (!response.ok) {
+    throw new Error(data.error || 'Failed to load channels from iptv-org');
+  }
+
+  if (!data.channels || data.channels.length === 0) {
+    throw new Error('No channels returned from iptv-org');
   }
 
   return data.channels;

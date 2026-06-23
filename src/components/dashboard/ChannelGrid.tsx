@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import type { Channel, StreamSource } from '@/types/stream';
-import { Search, Star, Tv, Award, Radio, Film, Globe } from 'lucide-react';
+import { Search, Star, Tv, Award, Radio, Film, Globe, WifiOff } from 'lucide-react';
 import ChannelLogo from './ChannelLogo';
 
 interface ChannelGridProps {
@@ -140,6 +140,7 @@ export default function ChannelGrid({
           <div className="grid grid-cols-2 gap-2.5">
             {starred.map((channel) => {
               const isSelected = channel.id === selectedChannelId;
+              const isOffline = channel.sources.length === 0;
               
               return (
                 <div
@@ -147,7 +148,9 @@ export default function ChannelGrid({
                   onClick={() => onSelectChannel(channel.id)}
                   className={`
                     flex items-center justify-between p-3 rounded-2xl border cursor-pointer transition-all duration-300 select-none relative overflow-hidden group
-                    ${isSelected 
+                    ${isOffline
+                      ? 'opacity-40 grayscale bg-white/[0.01] border-white/5 cursor-default'
+                      : isSelected 
                       ? 'bg-violet-600/20 border-violet-500/50 text-white shadow-[0_0_15px_rgba(124,58,237,0.3)] scale-[1.02] z-10' 
                       : 'bg-white/[0.02] border-white/5 hover:border-white/10 hover:bg-white/[0.04] text-slate-400 hover:text-slate-200 hover:scale-[1.01]'
                     }
@@ -157,7 +160,14 @@ export default function ChannelGrid({
                     <ChannelLogo channel={channel} size={32} className="rounded-lg" />
                     <div className="min-w-0">
                       <h5 className="text-[11px] font-bold truncate pr-3">{channel.name}</h5>
-                      <span className="text-[9px] text-slate-500 font-semibold">{channel.category}</span>
+                      <span className="text-[9px] text-slate-500 font-semibold">
+                        {isOffline ? (
+                          <span className="flex items-center space-x-1 text-rose-400/80">
+                            <WifiOff className="h-2.5 w-2.5" />
+                            <span>Offline</span>
+                          </span>
+                        ) : channel.category}
+                      </span>
                     </div>
                   </div>
 
@@ -169,7 +179,7 @@ export default function ChannelGrid({
                     <Star className="h-3.5 w-3.5 fill-current" />
                   </button>
                   
-                  {isSelected && (
+                  {isSelected && !isOffline && (
                     <span className="absolute bottom-0 right-0 w-2 h-2 bg-emerald-500 rounded-tl-lg" />
                   )}
                 </div>
@@ -191,6 +201,7 @@ export default function ChannelGrid({
           <div className="space-y-1.5">
             {unstarred.map((channel) => {
               const isSelected = channel.id === selectedChannelId;
+              const isOffline = channel.sources.length === 0;
               const hasHEVC = channel.sources.some((s: StreamSource) => s.codec === 'HEVC');
               const hasMPEGTS = channel.sources.some((s: StreamSource) => s.codec === 'MPEGTS');
               
@@ -200,7 +211,9 @@ export default function ChannelGrid({
                   onClick={() => onSelectChannel(channel.id)}
                   className={`
                     w-full flex items-center justify-between p-3 rounded-2xl border cursor-pointer transition-all duration-300 group text-left select-none relative overflow-hidden
-                    ${isSelected 
+                    ${isOffline
+                      ? 'opacity-40 grayscale bg-white/[0.01] border-white/5 cursor-default'
+                      : isSelected 
                       ? 'bg-violet-600/20 border-violet-500/50 text-white shadow-[0_0_15px_rgba(124,58,237,0.3)] scale-[1.02] z-10' 
                       : 'bg-white/[0.02] border-white/5 hover:border-white/10 hover:bg-white/[0.04] text-slate-400 hover:text-slate-200 hover:scale-[1.01]'
                     }
@@ -209,17 +222,22 @@ export default function ChannelGrid({
                   <div className="flex items-center space-x-3 min-w-0">
                     <div className="relative flex-shrink-0">
                       <ChannelLogo channel={channel} size={36} className="rounded-xl" />
-                      {isSelected && (
+                      {isSelected && !isOffline && (
                         <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-[#0a0c10] rounded-full" />
                       )}
                     </div>
 
                     <div className="min-w-0">
-                      <h4 className={`text-xs font-bold truncate ${isSelected ? 'text-slate-100 font-bold' : 'text-slate-350'}`}>
+                      <h4 className={`text-xs font-bold truncate ${isSelected && !isOffline ? 'text-slate-100 font-bold' : 'text-slate-350'}`}>
                         {channel.name}
                       </h4>
                       <p className="text-[10px] text-slate-500 font-semibold mt-0.5">
-                        {channel.category}
+                        {isOffline ? (
+                          <span className="flex items-center space-x-1 text-rose-400/80">
+                            <WifiOff className="h-2.5 w-2.5" />
+                            <span>Offline</span>
+                          </span>
+                        ) : channel.category}
                       </p>
                     </div>
                   </div>
@@ -227,12 +245,17 @@ export default function ChannelGrid({
                   <div className="flex items-center space-x-2">
                     {/* Technical badges */}
                     <div className="flex flex-col items-end space-y-0.5">
-                      {hasHEVC && (
+                      {isOffline && (
+                        <span className="text-[8px] font-black text-rose-400/90 bg-rose-500/10 px-1 py-0.5 rounded border border-rose-500/10">
+                          OFFLINE
+                        </span>
+                      )}
+                      {!isOffline && hasHEVC && (
                         <span className="text-[8px] font-black text-amber-400/90 bg-amber-500/10 px-1 py-0.5 rounded border border-amber-500/10">
                           HEVC
                         </span>
                       )}
-                      {hasMPEGTS && (
+                      {!isOffline && hasMPEGTS && (
                         <span className="text-[8px] font-black text-cyan-400/90 bg-cyan-500/10 px-1 py-0.5 rounded border border-cyan-500/10">
                           TS
                         </span>
@@ -249,7 +272,7 @@ export default function ChannelGrid({
                     </button>
                   </div>
                   
-                  {isSelected && (
+                  {isSelected && !isOffline && (
                     <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-tl-lg" />
                   )}
                 </div>

@@ -15,6 +15,7 @@ import {
 interface UnifiedPlayerProps {
   sources: StreamSource[];
   channelName: string;
+  onAllSourcesExhausted?: () => void;
 }
 
 interface LogEntry {
@@ -23,7 +24,7 @@ interface LogEntry {
   type: 'info' | 'warn' | 'error' | 'success';
 }
 
-export default function UnifiedPlayer({ sources, channelName }: UnifiedPlayerProps) {
+export default function UnifiedPlayer({ sources, channelName, onAllSourcesExhausted }: UnifiedPlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   
@@ -75,8 +76,12 @@ export default function UnifiedPlayer({ sources, channelName }: UnifiedPlayerPro
     } else {
       addLog(`All available sources exhausted for this channel.`, 'error');
       setPlayerError(`Playback failed. ${reason}`);
+      // Notify parent to auto-skip to next channel
+      if (onAllSourcesExhausted) {
+        setTimeout(() => onAllSourcesExhausted(), 2500);
+      }
     }
-  }, [addLog, currentSourceIndex, sources, useProxy]);
+  }, [addLog, currentSourceIndex, sources, useProxy, onAllSourcesExhausted]);
 
   const handleMpegtsAudioFallback = useCallback(() => {
     addLog('Audio decoder crash detected. Fallback to muted playback.', 'warn');

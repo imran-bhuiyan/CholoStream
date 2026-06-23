@@ -25,6 +25,70 @@ type IptvCache = {
 let cache: IptvCache | null = null;
 const CACHE_TTL_MS = 60 * 60 * 1000;
 
+// ---------------------------------------------------------------------------
+// Stream health probe cache — avoids re-probing the same URL within 10 min
+// ---------------------------------------------------------------------------
+const probeCache = new Map<string, { alive: boolean; probedAt: number }>();
+const PROBE_CACHE_TTL_MS = 10 * 60 * 1000;
+const PROBE_TIMEOUT_MS = 4000;
+
+/**
+ * Lightweight HEAD probe to check if a stream URL is reachable (HTTP 200).
+ * Results are cached for 10 minutes.
+ */
+async function probeStreamUrl(url: string): Promise<boolean> {
+  const cached = probeCache.get(url);
+  if (cached && Date.now() - cached.probedAt < PROBE_CACHE_TTL_MS) {
+    return cached.alive;
+  }
+
+  try {
+    const response = await fetch(url, {
+      method: 'HEAD',
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      },
+      redirect: 'follow',
+      signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
+    });
+
+    // Some servers don't support HEAD; fall back to a range GET
+    if (response.status === 405 || response.status === 403) {
+      const getResponse = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          Range: 'bytes=0-512',
+        },
+        redirect: 'follow',
+        signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
+      });
+      const alive = getResponse.ok || getResponse.status === 206;
+      probeCache.set(url, { alive, probedAt: Date.now() });
+      return alive;
+    }
+
+    const alive = response.ok;
+    probeCache.set(url, { alive, probedAt: Date.now() });
+    return alive;
+  } catch {
+    probeCache.set(url, { alive: false, probedAt: Date.now() });
+    return false;
+  }
+}
+
+// Clean probe cache periodically
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, value] of probeCache) {
+    if (now - value.probedAt > PROBE_CACHE_TTL_MS) probeCache.delete(key);
+  }
+}, 5 * 60 * 1000);
+
+// ---------------------------------------------------------------------------
+
 async function loadIptvData(): Promise<IptvCache> {
   if (cache && Date.now() - cache.fetchedAt < CACHE_TTL_MS) {
     return cache;
@@ -128,6 +192,8 @@ function scoreStream(stream: IptvStream): number {
   return score;
 }
 
+const MAX_CANDIDATES_PER_CHANNEL = 6;
+
 function resolveStreamsForIds(
   streams: IptvStream[],
   iptvIds: string[],
@@ -149,7 +215,7 @@ function resolveStreamsForIds(
         codec: inferCodec(candidate.url, candidate),
         isBackup: resolved.length > 0,
       });
-      if (resolved.length >= 3) return resolved;
+      if (resolved.length >= MAX_CANDIDATES_PER_CHANNEL) return resolved;
     }
   }
 
@@ -172,7 +238,7 @@ function resolveStreamsForIds(
         codec: inferCodec(candidate.url, candidate),
         isBackup: resolved.length > 0,
       });
-      if (resolved.length >= 3) return resolved;
+      if (resolved.length >= MAX_CANDIDATES_PER_CHANNEL) return resolved;
     }
   }
 
@@ -187,19 +253,51 @@ function resolveLogo(logos: Map<string, string>, iptvIds: string[]): string | un
   return undefined;
 }
 
+/**
+ * Probe an array of stream sources concurrently and return only the live ones.
+ * Probes run in parallel with a concurrency of 4 for speed.
+ */
+async function filterLiveSources(sources: StreamSource[]): Promise<StreamSource[]> {
+  if (sources.length === 0) return [];
+
+  const results = await Promise.allSettled(
+    sources.map(async (source) => {
+      const alive = await probeStreamUrl(source.url);
+      return { source, alive };
+    })
+  );
+
+  return results
+    .filter(
+      (r): r is PromiseFulfilledResult<{ source: StreamSource; alive: boolean }> =>
+        r.status === 'fulfilled' && r.value.alive
+    )
+    .map((r) => r.value.source)
+    .map((source, index) => ({
+      ...source,
+      isBackup: index > 0,
+    }));
+}
+
 export async function buildChannelsFromIptvOrg(): Promise<Channel[]> {
   const { streams, logos } = await loadIptvData();
 
-  return CHANNEL_CATALOG.map((entry) => {
-    const sources = resolveStreamsForIds(streams, entry.iptvIds, entry.titleFallbacks);
+  const channelPromises = CHANNEL_CATALOG.map(async (entry) => {
+    const rawSources = resolveStreamsForIds(streams, entry.iptvIds, entry.titleFallbacks);
     const logoUrl = resolveLogo(logos, entry.iptvIds);
+
+    // Probe each candidate and keep only reachable ones
+    const liveSources = await filterLiveSources(rawSources);
 
     return {
       id: entry.id,
       name: entry.name,
       category: entry.category,
       logoUrl: logoUrl ?? '',
-      sources,
+      sources: liveSources,
     };
-  }).filter((channel) => channel.sources.length > 0);
+  });
+
+  // Resolve all channel probes concurrently
+  return Promise.all(channelPromises);
 }

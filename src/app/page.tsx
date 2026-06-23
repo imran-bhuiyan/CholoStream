@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { MATCH_SCHEDULE } from '@/data/worldCup2026Schedule';
 import type { Channel } from '@/types/stream';
 import DashboardLayout from '@/components/layout/DashboardLayout';
@@ -9,19 +9,22 @@ import UnifiedPlayer from '@/components/video/UnifiedPlayer';
 import LiveScores from '@/components/LiveScores';
 import MatchScheduleList from '@/components/schedule/MatchScheduleList';
 import { useChannels } from '@/hooks/useChannels';
-import { Info, Radio, RefreshCw } from 'lucide-react';
+import { Info, Radio, RefreshCw, SkipForward } from 'lucide-react';
 import { PlayerSkeleton, ChannelSkeleton, ScoresSkeleton, ScheduleSkeleton } from '@/components/ui/Skeleton';
 
 export default function Home() {
   const { data: channels = [], isLoading, isError, error, refetch, isFetching } = useChannels();
   const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
+  const [skipToast, setSkipToast] = useState<string | null>(null);
 
+  // Auto-select first channel that has working sources
   useEffect(() => {
     if (!channels.length) return;
     const hasCurrent = selectedChannelId && channels.some((c) => c.id === selectedChannelId);
     if (!hasCurrent) {
+      const firstLive = channels.find((c) => c.sources.length > 0);
       const timeoutId = setTimeout(() => {
-        setSelectedChannelId(channels[0]?.id ?? null);
+        setSelectedChannelId(firstLive?.id ?? channels[0]?.id ?? null);
       }, 0);
       return () => clearTimeout(timeoutId);
     }
@@ -37,6 +40,27 @@ export default function Home() {
       setSelectedChannelId(channelId);
     }
   };
+
+  // Auto-skip to next channel with working sources when current channel fails
+  const handleSourcesExhausted = useCallback(() => {
+    if (!channels.length || !activeChannel) return;
+
+    const currentIndex = channels.findIndex((c) => c.id === activeChannel.id);
+    // Find the next channel with sources, wrapping around
+    for (let i = 1; i < channels.length; i++) {
+      const nextIndex = (currentIndex + i) % channels.length;
+      const next = channels[nextIndex];
+      if (next.sources.length > 0) {
+        setSkipToast(`"${activeChannel.name}" is offline. Switching to "${next.name}"...`);
+        setSelectedChannelId(next.id);
+        setTimeout(() => setSkipToast(null), 4000);
+        return;
+      }
+    }
+    // No channels with sources found
+    setSkipToast('All channels are currently offline.');
+    setTimeout(() => setSkipToast(null), 5000);
+  }, [channels, activeChannel]);
 
   const sidebarSlot = isLoading ? (
     <ChannelSkeleton />
@@ -61,12 +85,32 @@ export default function Home() {
     />
   );
 
-  const playerSlot = activeChannel ? (
+  const isActiveChannelOnline = activeChannel && activeChannel.sources.length > 0;
+
+  const playerSlot = activeChannel && isActiveChannelOnline ? (
     <UnifiedPlayer
       key={activeChannel.id}
       sources={activeChannel.sources}
       channelName={activeChannel.name}
+      onAllSourcesExhausted={handleSourcesExhausted}
     />
+  ) : activeChannel && !isActiveChannelOnline ? (
+    <div className="flex flex-col items-center justify-center h-full min-h-[300px] text-center p-6 space-y-4">
+      <div className="w-16 h-16 rounded-full bg-slate-800/60 flex items-center justify-center border border-slate-700">
+        <Radio className="h-7 w-7 text-slate-500" />
+      </div>
+      <div className="space-y-1">
+        <h3 className="text-lg font-bold text-slate-300">{activeChannel.name}</h3>
+        <p className="text-sm text-slate-500">This channel is currently offline. No working streams found.</p>
+      </div>
+      <button
+        onClick={handleSourcesExhausted}
+        className="flex items-center space-x-2 px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg transition-colors font-medium text-sm shadow-lg shadow-violet-600/30"
+      >
+        <SkipForward className="h-4 w-4" />
+        <span>Skip to Next Channel</span>
+      </button>
+    </div>
   ) : isFetching ? (
     <PlayerSkeleton />
   ) : (
@@ -128,6 +172,13 @@ export default function Home() {
           schedule={scheduleSlot}
         />
       </div>
+      {/* Auto-skip toast notification */}
+      {skipToast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900/95 backdrop-blur-md border border-violet-500/30 text-slate-200 px-5 py-3 rounded-xl flex items-center space-x-3 shadow-2xl animate-fade-in max-w-md">
+          <SkipForward className="h-5 w-5 text-violet-400 flex-shrink-0" />
+          <span className="text-sm font-semibold">{skipToast}</span>
+        </div>
+      )}
     </div>
   );
 }
