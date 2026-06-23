@@ -172,10 +172,24 @@ export const CHANNEL_CATALOG: ChannelCatalogEntry[] = [
     titleFallbacks: ['HBO Boxing', 'HBO'],
   },
   {
-    id: 'rtb-go',
-    name: 'RTB GO Live',
-    category: 'Entertainment',
-    iptvIds: ['RTBGo.bn'],
+    id: 't-sports',
+    name: 'T Sports',
+    category: 'Sports',
+    iptvIds: ['TSports.bd'],
+    titleFallbacks: ['T Sports'],
+  },
+  {
+    id: 'jamuna-tv',
+    name: 'Jamuna TV',
+    category: 'News',
+    iptvIds: ['JamunaTV.bd'],
+  },
+  {
+    id: 'caracol-tv',
+    name: 'Caracol TV',
+    category: 'Sports',
+    iptvIds: ['CaracolTV.co'],
+    titleFallbacks: ['Caracol'],
   },
 ];
 
