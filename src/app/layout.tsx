@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Soccerlit | Live Sports & TV Streaming Dashboard",
-  description: "Stream live IPTV channels, watch the FIFA World Cup 2026, track scores, and view match schedules.",
+  title: "CholoStream | Live Sports & TV Streaming Dashboard",
+  description: "CholoStream — Stream live IPTV channels, watch the FIFA World Cup 2026, track scores, and view match schedules.",
 };
 
 import QueryProvider from "@/providers/QueryProvider";

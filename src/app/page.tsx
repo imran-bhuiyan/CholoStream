@@ -105,7 +105,7 @@ export default function Home() {
           <div className="flex flex-col">
             <h1 className="text-sm font-extrabold text-slate-100 tracking-wide flex items-center space-x-2">
               <span className="font-extrabold text-lg text-slate-100 tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
-                Soccerlit
+                CholoStream
               </span>
             </h1>
             <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-widest mt-0.5">
