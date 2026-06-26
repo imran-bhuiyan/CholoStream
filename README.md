@@ -1,4 +1,4 @@
-# Soccerlit
+# CholoStream
 
 Live IPTV streaming dashboard for the FIFA World Cup 2026. Built with Next.js 16, React 19, and Tailwind CSS v4.
 
