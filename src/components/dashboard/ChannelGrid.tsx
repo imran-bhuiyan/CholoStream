@@ -27,8 +27,8 @@ export default function ChannelGrid({
       if (stored) {
         queueMicrotask(() => setFavorites(JSON.parse(stored)));
       }
-    } catch (e) {
-      console.warn('Could not load favorites from localStorage', e);
+    } catch {
+      // Silently ignore localStorage errors (e.g., in incognito mode or if disabled)
     }
   }, []);
 
@@ -41,8 +41,8 @@ export default function ChannelGrid({
     setFavorites(nextFavorites);
     try {
       localStorage.setItem('cholostream_favorites', JSON.stringify(nextFavorites));
-    } catch (err) {
-      console.error(err);
+    } catch {
+      // Silently ignore localStorage errors
     }
   };
 
