@@ -42,7 +42,7 @@ export default function ChannelGrid({
     try {
       localStorage.setItem('cholostream_favorites', JSON.stringify(nextFavorites));
     } catch (err) {
-      console.error(err);
+      console.warn('Could not save favorites to localStorage', err);
     }
   };
 
