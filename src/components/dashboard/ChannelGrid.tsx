@@ -77,8 +77,9 @@ export default function ChannelGrid({
     const starredList: Channel[] = [];
     const unstarredList: Channel[] = [];
 
+    const favoritesSet = new Set(favorites);
     filteredChannels.forEach(channel => {
-      if (favorites.includes(channel.id)) {
+      if (favoritesSet.has(channel.id)) {
         starredList.push(channel);
       } else {
         unstarredList.push(channel);
