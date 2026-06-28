@@ -9,7 +9,7 @@ interface ChannelsResponse {
   error?: string;
 }
 
-async function fetchChannels(): Promise<Channel[]> {
+export async function fetchChannels(): Promise<Channel[]> {
   const response = await fetch('/api/channels');
   const data = (await response.json()) as ChannelsResponse;
 

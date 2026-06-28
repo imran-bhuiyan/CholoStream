@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import dns from 'node:dns';
+import net from 'node:net';
+import ipaddr from 'ipaddr.js';
 
 // Simple in-memory rate limiter
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
@@ -27,24 +30,31 @@ setInterval(() => {
   }
 }, 60_000);
 
-const PRIVATE_HOST_PATTERNS = [
-  /^localhost$/i,
-  /^127\./,
-  /^10\./,
-  /^192\.168\./,
-  /^172\.(1[6-9]|2\d|3[0-1])\./,
-  /^169\.254\./,
-  /^\[?::1\]?$/i,
-  /^0\.0\.0\.0$/,
-];
+function isSafeIP(ipStr: string): boolean {
+  try {
+    const addr = ipaddr.process(ipStr);
+    const range = addr.range();
+    if (range === 'unicast') return true;
+    if (range === 'ipv4Mapped') {
+      const ipv4 = (addr as ipaddr.IPv6).toIPv4Address();
+      return ipv4.range() === 'unicast';
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
 
-function isSafeTargetUrl(value: string): URL | null {
+function isSafeTargetUrlSync(value: string): URL | null {
   try {
     const url = new URL(value);
-    const isHttp = url.protocol === 'http:' || url.protocol === 'https:';
-    const isPrivateHost = PRIVATE_HOST_PATTERNS.some((pattern) => pattern.test(url.hostname));
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
 
-    if (!isHttp || isPrivateHost) {
+    if (url.hostname === 'localhost' || url.hostname === 'host.docker.internal') {
+      return null;
+    }
+
+    if (net.isIP(url.hostname) && !isSafeIP(url.hostname)) {
       return null;
     }
 
@@ -54,12 +64,56 @@ function isSafeTargetUrl(value: string): URL | null {
   }
 }
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Range',
-  'Cache-Control': 'no-cache, no-store, must-revalidate',
-};
+async function getSafeTargetUrlAsync(value: string): Promise<URL | null> {
+  const url = isSafeTargetUrlSync(value);
+  if (!url) return null;
+
+  try {
+    const hostnameToLookup = url.hostname.startsWith('[') && url.hostname.endsWith(']')
+      ? url.hostname.slice(1, -1)
+      : url.hostname;
+
+    const lookup = await dns.promises.lookup(hostnameToLookup);
+    if (!isSafeIP(lookup.address)) {
+      return null;
+    }
+
+    return url;
+  } catch {
+    return null;
+  }
+}
+
+function getCorsHeaders(request: NextRequest): Record<string, string> {
+  const headers: Record<string, string> = {
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Range',
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+  };
+
+  const origin = request.headers.get('origin');
+
+  // Allow same-origin, localhost, and vercel deployments
+  if (origin) {
+    try {
+      const originUrl = new URL(origin);
+      const isLocalhost = originUrl.hostname === 'localhost' || originUrl.hostname === '127.0.0.1';
+      const isVercel = originUrl.hostname.endsWith('.vercel.app');
+
+      // Also allow if it matches the current host
+      const host = request.headers.get('host');
+      const isSameHost = host && originUrl.host === host;
+
+      if (isLocalhost || isVercel || isSameHost) {
+        headers['Access-Control-Allow-Origin'] = origin;
+      }
+    } catch {
+      // Ignore invalid origins
+    }
+  }
+
+  return headers;
+}
 
 const STREAM_FETCH_TIMEOUT_MS = 15000;
 
@@ -70,11 +124,13 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const xRealIp = request.headers.get('x-real-ip');
   // In a chain like "client-spoofed-ip, intermediate-proxy, edge-proxy", the rightmost is appended by the edge proxy we trust.
   const clientIp = xRealIp || (forwardedFor ? forwardedFor.split(',').pop()?.trim() || 'unknown' : 'unknown');
+  const corsHeaders = getCorsHeaders(request);
+  const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
 
   if (!checkRateLimit(clientIp)) {
     return new NextResponse('Rate limit exceeded. Try again later.', {
       status: 429,
-      headers: { ...CORS_HEADERS, 'Retry-After': '60' },
+      headers: { ...corsHeaders, 'Retry-After': '60' },
     });
   }
 
@@ -85,12 +141,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     return new NextResponse('Missing url parameter', { status: 400 });
   }
 
-  const safeTargetUrl = isSafeTargetUrl(targetUrl);
+  const safeTargetUrl = await getSafeTargetUrlAsync(targetUrl);
 
   if (!safeTargetUrl) {
     return new NextResponse('Unsupported or disallowed stream URL', {
       status: 400,
-      headers: CORS_HEADERS,
+      headers: corsHeaders,
     });
   }
 
@@ -109,14 +165,33 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       headers: {
         ...Object.fromEntries(requestHeaders),
       },
-      redirect: 'follow',
+      redirect: 'manual',
       signal: AbortSignal.timeout(STREAM_FETCH_TIMEOUT_MS),
     });
+
+    // Handle redirects manually to prevent SSRF via redirect
+    if (response.status >= 300 && response.status < 400) {
+      const location = response.headers.get('location');
+      if (!location) {
+         return new NextResponse('Redirect missing location', { status: 502 });
+      }
+
+      const absoluteLocation = new URL(location, safeTargetUrl.href).href;
+      if (!(await getSafeTargetUrlAsync(absoluteLocation))) {
+         return new NextResponse('Redirect to unsafe target', { status: 403 });
+      }
+
+      // Instead of recursively fetching, return 302 to the client to let them handle the redirect via proxy
+      return NextResponse.redirect(`${new URL(request.url).origin}/api/proxy?url=${encodeURIComponent(absoluteLocation)}`, {
+         status: 302,
+         headers: CORS_HEADERS
+      });
+    }
 
     if (!response.ok) {
       return new NextResponse(`Proxy fetch failed: ${response.statusText}`, {
         status: response.status,
-        headers: CORS_HEADERS,
+        headers: corsHeaders,
       });
     }
 
@@ -156,7 +231,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
           return trimmed.replace(/(URI=")([^"]+)(")/gi, (match, p1, p2, p3) => {
             try {
               const absoluteUrl = new URL(p2, baseUrl).href;
-              if (isSafeTargetUrl(absoluteUrl)) {
+              if (isSafeTargetUrlSync(absoluteUrl)) {
                 return `${p1}${origin}/api/proxy?url=${encodeURIComponent(absoluteUrl)}${p3}`;
               }
             } catch {
@@ -173,7 +248,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         // Rewrite segment/track URLs
         try {
           const absoluteUrl = new URL(trimmed, baseUrl).href;
-          return isSafeTargetUrl(absoluteUrl)
+          return isSafeTargetUrlSync(absoluteUrl)
             ? `${origin}/api/proxy?url=${encodeURIComponent(absoluteUrl)}`
             : line;
         } catch {
@@ -184,7 +259,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       return new NextResponse(rewrittenLines.join('\n'), {
         status: 200,
         headers: {
-          ...CORS_HEADERS,
+          ...corsHeaders,
           'Content-Type': contentType || 'application/vnd.apple.mpegurl',
         },
       });
@@ -197,7 +272,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     return new NextResponse(response.body as unknown as ReadableStream, {
       status: response.status,
       headers: {
-        ...CORS_HEADERS,
+        ...corsHeaders,
         'Content-Type': contentType || 'application/octet-stream',
         ...(response.headers.get('content-length')
           ? { 'Content-Length': response.headers.get('content-length') as string }
@@ -216,16 +291,17 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     return new NextResponse(timedOut ? 'Proxy fetch timed out' : `Proxy error: ${err.message}`, {
       status: timedOut ? 504 : 500,
-      headers: CORS_HEADERS,
+      headers: corsHeaders,
     });
   }
 }
 
-export async function OPTIONS(): Promise<NextResponse> {
+export async function OPTIONS(request: NextRequest): Promise<NextResponse> {
+  const corsHeaders = getCorsHeaders(request);
   return new NextResponse(null, {
     status: 204,
     headers: {
-      ...CORS_HEADERS,
+      ...corsHeaders,
       'Access-Control-Max-Age': '86400',
     },
   });
