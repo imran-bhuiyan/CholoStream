@@ -54,22 +54,47 @@ function isSafeTargetUrl(value: string): URL | null {
   }
 }
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Range',
-  'Cache-Control': 'no-cache, no-store, must-revalidate',
-};
+function getCorsHeaders(request: NextRequest): Record<string, string> {
+  const headers: Record<string, string> = {
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Range',
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+  };
+
+  const origin = request.headers.get('origin');
+
+  // Allow same-origin, localhost, and vercel deployments
+  if (origin) {
+    try {
+      const originUrl = new URL(origin);
+      const isLocalhost = originUrl.hostname === 'localhost' || originUrl.hostname === '127.0.0.1';
+      const isVercel = originUrl.hostname.endsWith('.vercel.app');
+
+      // Also allow if it matches the current host
+      const host = request.headers.get('host');
+      const isSameHost = host && originUrl.host === host;
+
+      if (isLocalhost || isVercel || isSameHost) {
+        headers['Access-Control-Allow-Origin'] = origin;
+      }
+    } catch {
+      // Ignore invalid origins
+    }
+  }
+
+  return headers;
+}
 
 const STREAM_FETCH_TIMEOUT_MS = 15000;
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
+  const corsHeaders = getCorsHeaders(request);
   const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
 
   if (!checkRateLimit(clientIp)) {
     return new NextResponse('Rate limit exceeded. Try again later.', {
       status: 429,
-      headers: { ...CORS_HEADERS, 'Retry-After': '60' },
+      headers: { ...corsHeaders, 'Retry-After': '60' },
     });
   }
 
@@ -85,7 +110,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   if (!safeTargetUrl) {
     return new NextResponse('Unsupported or disallowed stream URL', {
       status: 400,
-      headers: CORS_HEADERS,
+      headers: corsHeaders,
     });
   }
 
@@ -111,7 +136,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     if (!response.ok) {
       return new NextResponse(`Proxy fetch failed: ${response.statusText}`, {
         status: response.status,
-        headers: CORS_HEADERS,
+        headers: corsHeaders,
       });
     }
 
@@ -179,7 +204,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       return new NextResponse(rewrittenLines.join('\n'), {
         status: 200,
         headers: {
-          ...CORS_HEADERS,
+          ...corsHeaders,
           'Content-Type': contentType || 'application/vnd.apple.mpegurl',
         },
       });
@@ -192,7 +217,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     return new NextResponse(response.body as unknown as ReadableStream, {
       status: response.status,
       headers: {
-        ...CORS_HEADERS,
+        ...corsHeaders,
         'Content-Type': contentType || 'application/octet-stream',
         ...(response.headers.get('content-length')
           ? { 'Content-Length': response.headers.get('content-length') as string }
@@ -211,16 +236,17 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     return new NextResponse(timedOut ? 'Proxy fetch timed out' : `Proxy error: ${err.message}`, {
       status: timedOut ? 504 : 500,
-      headers: CORS_HEADERS,
+      headers: corsHeaders,
     });
   }
 }
 
-export async function OPTIONS(): Promise<NextResponse> {
+export async function OPTIONS(request: NextRequest): Promise<NextResponse> {
+  const corsHeaders = getCorsHeaders(request);
   return new NextResponse(null, {
     status: 204,
     headers: {
-      ...CORS_HEADERS,
+      ...corsHeaders,
       'Access-Control-Max-Age': '86400',
     },
   });
