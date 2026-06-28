@@ -27,8 +27,8 @@ export default function ChannelGrid({
       if (stored) {
         queueMicrotask(() => setFavorites(JSON.parse(stored)));
       }
-    } catch (e) {
-      console.warn('Could not load favorites from localStorage', e);
+    } catch {
+      // Silently ignore localStorage errors (e.g., in incognito mode or if disabled)
     }
   }, []);
 
@@ -77,8 +77,9 @@ export default function ChannelGrid({
     const starredList: Channel[] = [];
     const unstarredList: Channel[] = [];
 
+    const favoritesSet = new Set(favorites);
     filteredChannels.forEach(channel => {
-      if (favorites.includes(channel.id)) {
+      if (favoritesSet.has(channel.id)) {
         starredList.push(channel);
       } else {
         unstarredList.push(channel);
