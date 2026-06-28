@@ -125,7 +125,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   // In a chain like "client-spoofed-ip, intermediate-proxy, edge-proxy", the rightmost is appended by the edge proxy we trust.
   const clientIp = xRealIp || (forwardedFor ? forwardedFor.split(',').pop()?.trim() || 'unknown' : 'unknown');
   const corsHeaders = getCorsHeaders(request);
-  const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
 
   if (!checkRateLimit(clientIp)) {
     return new NextResponse('Rate limit exceeded. Try again later.', {
@@ -184,7 +183,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       // Instead of recursively fetching, return 302 to the client to let them handle the redirect via proxy
       return NextResponse.redirect(`${new URL(request.url).origin}/api/proxy?url=${encodeURIComponent(absoluteLocation)}`, {
          status: 302,
-         headers: CORS_HEADERS
+         headers: corsHeaders
       });
     }
 

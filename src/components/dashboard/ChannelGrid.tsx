@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import type { Channel } from '@/types/stream';
 import { Search, Star, Tv, Award, Radio, Film, Globe } from 'lucide-react';
 import { useChannelFilters } from '@/hooks/useChannelFilters';
