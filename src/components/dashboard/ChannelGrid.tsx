@@ -96,7 +96,7 @@ export default function ChannelGrid({
     <div className="space-y-6 flex flex-col h-full w-full">
       
       {/* Controls: Search and Categories */}
-      <div className="space-y-4">
+      <div className="space-y-4 sticky top-0 z-20 bg-black/95 backdrop-blur-md pt-2 pb-3 -mx-2 px-2 rounded-xl">
         {/* Search */}
         <div className="relative">
           <Search className="absolute left-3.5 top-2.5 h-4.5 w-4.5 text-slate-550" />
