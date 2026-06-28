@@ -45,9 +45,15 @@ export default function MatchScheduleList({
     overscan: 10,
   });
 
+  const channelMap = useMemo(() => {
+    const map = new Map<string, string>();
+    channels.forEach(c => map.set(c.id, c.name));
+    return map;
+  }, [channels]);
+
   const getChannelName = (channelId?: string) => {
     if (!channelId) return 'N/A';
-    return channels.find(c => c.id === channelId)?.name || 'Sport TV';
+    return channelMap.get(channelId) || 'Sport TV';
   };
 
   const getStatusBadge = (status: MatchScheduleType['status']) => {

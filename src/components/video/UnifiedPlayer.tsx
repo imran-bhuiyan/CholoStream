@@ -12,6 +12,9 @@ import {
   Globe, ChevronDown, ChevronUp
 } from 'lucide-react';
 
+// HUD controls auto-hide delay
+const HUD_HIDE_TIMEOUT_MS = 3000;
+
 interface UnifiedPlayerProps {
   sources: StreamSource[];
   channelName: string;
@@ -284,7 +287,7 @@ export default function UnifiedPlayer({ sources, channelName, onAllSourcesExhaus
       if (isPlaying) {
         setShowControls(false);
       }
-    }, 3000);
+    }, HUD_HIDE_TIMEOUT_MS);
   };
 
   useEffect(() => {

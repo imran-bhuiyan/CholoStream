@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { Award, Film, Globe, Radio, Tv } from 'lucide-react';
 import type { Channel } from '@/types/stream';
 
@@ -44,8 +45,8 @@ export default function ChannelLogo({ channel, size = 36, className = '' }: Chan
       style={{ width: size, height: size }}
     >
       {showImage ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        <Image
+          unoptimized={true}
           src={channel.logoUrl}
           alt={`${channel.name} logo`}
           width={size}
