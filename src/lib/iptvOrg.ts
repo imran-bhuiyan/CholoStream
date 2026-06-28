@@ -36,7 +36,7 @@ const PROBE_TIMEOUT_MS = 4000;
  * Lightweight HEAD probe to check if a stream URL is reachable (HTTP 200).
  * Results are cached for 10 minutes.
  */
-async function probeStreamUrl(url: string): Promise<boolean> {
+export async function probeStreamUrl(url: string): Promise<boolean> {
   const cached = probeCache.get(url);
   if (cached && Date.now() - cached.probedAt < PROBE_CACHE_TTL_MS) {
     return cached.alive;
@@ -89,6 +89,11 @@ setInterval(() => {
 
 // ---------------------------------------------------------------------------
 
+
+export function clearProbeCache(): void {
+  probeCache.clear();
+}
+
 async function loadIptvData(): Promise<IptvCache> {
   if (cache && Date.now() - cache.fetchedAt < CACHE_TTL_MS) {
     return cache;
@@ -110,15 +115,16 @@ async function loadIptvData(): Promise<IptvCache> {
 
   const [allStreams, allLogos] = await Promise.all([streamReq, logosReq]);
 
+  const fallbacksArray = Array.from(neededTitleFallbacks);
   for (const stream of allStreams) {
     if (stream.channel && neededIptvIds.has(stream.channel)) {
       streams.push(stream);
       continue;
     }
-    if (neededTitleFallbacks.size > 0 && stream.title) {
+    if (fallbacksArray.length > 0 && stream.title) {
        const lowerTitle = stream.title.toLowerCase();
        let matchFound = false;
-       for (const fallback of Array.from(neededTitleFallbacks)) {
+       for (const fallback of fallbacksArray) {
           if (lowerTitle.includes(fallback)) {
             matchFound = true;
             break;
@@ -129,9 +135,9 @@ async function loadIptvData(): Promise<IptvCache> {
           continue;
        }
     }
-    if (neededTitleFallbacks.size > 0 && stream.channel) {
+    if (fallbacksArray.length > 0 && stream.channel) {
        const lowerChan = stream.channel.toLowerCase();
-       for (const fallback of Array.from(neededTitleFallbacks)) {
+       for (const fallback of fallbacksArray) {
           if (lowerChan.includes(fallback)) {
              streams.push(stream);
              break;
@@ -202,11 +208,7 @@ function resolveStreamsForIds(
   const seen = new Set<string>();
   const resolved: StreamSource[] = [];
 
-  for (const iptvId of iptvIds) {
-    const candidates = streams
-      .filter((s) => s.channel === iptvId && isUsableStreamUrl(s.url))
-      .sort((a, b) => scoreStream(b) - scoreStream(a));
-
+  function addCandidates(candidates: IptvStream[]): boolean {
     for (const candidate of candidates) {
       if (seen.has(candidate.url)) continue;
       seen.add(candidate.url);
@@ -215,8 +217,17 @@ function resolveStreamsForIds(
         codec: inferCodec(candidate.url, candidate),
         isBackup: resolved.length > 0,
       });
-      if (resolved.length >= MAX_CANDIDATES_PER_CHANNEL) return resolved;
+      if (resolved.length >= MAX_CANDIDATES_PER_CHANNEL) return true;
     }
+    return false;
+  }
+
+  for (const iptvId of iptvIds) {
+    const candidates = streams
+      .filter((s) => s.channel === iptvId && isUsableStreamUrl(s.url))
+      .sort((a, b) => scoreStream(b) - scoreStream(a));
+
+    if (addCandidates(candidates)) return resolved;
   }
 
   for (const title of titleFallbacks) {
@@ -230,16 +241,7 @@ function resolveStreamsForIds(
       )
       .sort((a, b) => scoreStream(b) - scoreStream(a));
 
-    for (const candidate of candidates) {
-      if (seen.has(candidate.url)) continue;
-      seen.add(candidate.url);
-      resolved.push({
-        url: candidate.url,
-        codec: inferCodec(candidate.url, candidate),
-        isBackup: resolved.length > 0,
-      });
-      if (resolved.length >= MAX_CANDIDATES_PER_CHANNEL) return resolved;
-    }
+    if (addCandidates(candidates)) return resolved;
   }
 
   return resolved;

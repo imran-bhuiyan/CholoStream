@@ -87,11 +87,17 @@ export default function LiveScores({ matches, channels, onSelectChannel }: LiveS
   const scoreboardMatches =
     liveMatches.length > 0 ? liveMatches : todayResults;
 
+  const channelMap = useMemo(() => {
+    const map = new Map<string, string>();
+    channels.forEach((c) => map.set(c.id, c.name));
+    return map;
+  }, [channels]);
+
   if (scoreboardMatches.length === 0 && todayUpcoming.length === 0) return null;
 
   const getChannelName = (channelId?: string) => {
     if (!channelId) return 'N/A';
-    return channels.find((c) => c.id === channelId)?.name || 'Sport TV';
+    return channelMap.get(channelId) || 'Sport TV';
   };
 
   const headerTitle =
