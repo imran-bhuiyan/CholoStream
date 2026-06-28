@@ -118,6 +118,12 @@ function getCorsHeaders(request: NextRequest): Record<string, string> {
 const STREAM_FETCH_TIMEOUT_MS = 15000;
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
+  // Next.js 16 changed the request object, 'ip' is removed from NextRequest directly.
+  // We'll rely on standard headers, but securely fetch the *last* IP in the chain (closest to the proxy) instead of the first (which is easily spoofed by the client).
+  const forwardedFor = request.headers.get('x-forwarded-for');
+  const xRealIp = request.headers.get('x-real-ip');
+  // In a chain like "client-spoofed-ip, intermediate-proxy, edge-proxy", the rightmost is appended by the edge proxy we trust.
+  const clientIp = xRealIp || (forwardedFor ? forwardedFor.split(',').pop()?.trim() || 'unknown' : 'unknown');
   const corsHeaders = getCorsHeaders(request);
   const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
 
