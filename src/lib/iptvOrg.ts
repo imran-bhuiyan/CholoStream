@@ -36,7 +36,7 @@ const PROBE_TIMEOUT_MS = 4000;
  * Lightweight HEAD probe to check if a stream URL is reachable (HTTP 200).
  * Results are cached for 10 minutes.
  */
-async function probeStreamUrl(url: string): Promise<boolean> {
+export async function probeStreamUrl(url: string): Promise<boolean> {
   const cached = probeCache.get(url);
   if (cached && Date.now() - cached.probedAt < PROBE_CACHE_TTL_MS) {
     return cached.alive;
@@ -88,6 +88,11 @@ setInterval(() => {
 }, 5 * 60 * 1000);
 
 // ---------------------------------------------------------------------------
+
+
+export function clearProbeCache(): void {
+  probeCache.clear();
+}
 
 async function loadIptvData(): Promise<IptvCache> {
   if (cache && Date.now() - cache.fetchedAt < CACHE_TTL_MS) {
