@@ -12,6 +12,9 @@ import { usePlayerControls } from './player/usePlayerControls';
 import { PlayerHUD } from './player/PlayerHUD';
 import { PlayerLogs } from './player/PlayerLogs';
 
+// HUD controls auto-hide delay
+const HUD_HIDE_TIMEOUT_MS = 3000;
+
 interface UnifiedPlayerProps {
   sources: StreamSource[];
   channelName: string;
@@ -128,7 +131,7 @@ export default function UnifiedPlayer({ sources, channelName, onAllSourcesExhaus
       if (controls.isPlaying) {
         controls.setShowControls(false);
       }
-    }, 3000);
+    }, HUD_HIDE_TIMEOUT_MS);
   };
 
   useEffect(() => {

@@ -27,8 +27,8 @@ export default function ChannelGrid({
       if (stored) {
         queueMicrotask(() => setFavorites(JSON.parse(stored)));
       }
-    } catch (e) {
-      console.warn('Could not load favorites from localStorage', e);
+    } catch {
+      // Silently ignore localStorage errors (e.g., in incognito mode or if disabled)
     }
   }, []);
 
@@ -42,7 +42,7 @@ export default function ChannelGrid({
     try {
       localStorage.setItem('cholostream_favorites', JSON.stringify(nextFavorites));
     } catch (err) {
-      console.error(err);
+      console.warn('Could not save favorites to localStorage', err);
     }
   };
 
@@ -77,8 +77,9 @@ export default function ChannelGrid({
     const starredList: Channel[] = [];
     const unstarredList: Channel[] = [];
 
+    const favoritesSet = new Set(favorites);
     filteredChannels.forEach(channel => {
-      if (favorites.includes(channel.id)) {
+      if (favoritesSet.has(channel.id)) {
         starredList.push(channel);
       } else {
         unstarredList.push(channel);
@@ -95,7 +96,7 @@ export default function ChannelGrid({
     <div className="space-y-6 flex flex-col h-full w-full">
       
       {/* Controls: Search and Categories */}
-      <div className="space-y-4">
+      <div className="space-y-4 sticky top-0 z-20 bg-black/95 backdrop-blur-md pt-2 pb-3 -mx-2 px-2 rounded-xl">
         {/* Search */}
         <div className="relative">
           <Search className="absolute left-3.5 top-2.5 h-4.5 w-4.5 text-slate-550" />
