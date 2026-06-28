@@ -34,21 +34,87 @@ export default function ChannelGrid({
   selectedChannelId,
   onSelectChannel
 }: ChannelGridProps) {
-  const {
-    searchQuery,
-    setSearchQuery,
-    activeCategory,
-    setActiveCategory,
-    toggleFavorite,
-    starred,
-    unstarred,
-  } = useChannelFilters(channels);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeCategory, setActiveCategory] = useState<string>('All');
+  const [favorites, setFavorites] = useState<string[]>([]);
+
+  // Safe localStorage reading on mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('cholostream_favorites');
+      if (stored) {
+        queueMicrotask(() => setFavorites(JSON.parse(stored)));
+      }
+    } catch {
+      // Silently ignore localStorage errors (e.g., in incognito mode or if disabled)
+    }
+  }, []);
+
+  const toggleFavorite = (channelId: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card selection click
+    const nextFavorites = favorites.includes(channelId)
+      ? favorites.filter(id => id !== channelId)
+      : [...favorites, channelId];
+    
+    setFavorites(nextFavorites);
+    try {
+      localStorage.setItem('cholostream_favorites', JSON.stringify(nextFavorites));
+    } catch (err) {
+      console.warn('Could not save favorites to localStorage', err);
+    }
+  };
+
+  const categories = ['All', 'Sports', 'News', 'Entertainment', 'International'];
+
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case 'Sports':
+        return <Award className="h-4 w-4 text-violet-400" />;
+      case 'News':
+        return <Radio className="h-4 w-4 text-blue-450" />;
+      case 'Entertainment':
+        return <Film className="h-4 w-4 text-emerald-450" />;
+      case 'International':
+        return <Globe className="h-4 w-4 text-cyan-400" />;
+      default:
+        return <Tv className="h-4 w-4 text-slate-400" />;
+    }
+  };
+
+  // Filter channels based on query & category
+  const filteredChannels = useMemo(() => {
+    return channels.filter(channel => {
+      const matchesSearch = channel.name.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCategory = activeCategory === 'All' || channel.category === activeCategory;
+      return matchesSearch && matchesCategory;
+    });
+  }, [channels, searchQuery, activeCategory]);
+
+  // Separate starred channels that match the current filters
+  const { starred, unstarred } = useMemo(() => {
+    const starredList: Channel[] = [];
+    const unstarredList: Channel[] = [];
+
+    const favoritesSet = new Set(favorites);
+    filteredChannels.forEach(channel => {
+      if (favoritesSet.has(channel.id)) {
+        starredList.push(channel);
+      } else {
+        unstarredList.push(channel);
+      }
+    });
+
+    return {
+      starred: starredList,
+      unstarred: unstarredList
+    };
+  }, [filteredChannels, favorites]);
 
   return (
     <div className="space-y-6 flex flex-col h-full w-full">
       
       {/* Controls: Search and Categories */}
-      <div className="space-y-4">
+      <div className="space-y-4 sticky top-0 z-20 bg-black/95 backdrop-blur-md pt-2 pb-3 -mx-2 px-2 rounded-xl">
         {/* Search */}
         <div className="relative">
           <Search className="absolute left-3.5 top-2.5 h-4.5 w-4.5 text-slate-550" />
