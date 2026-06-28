@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "vitest"
     "test": "vitest run"
   },
   "dependencies": {
@@ -29,6 +30,7 @@
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6.0.3",
     "@vitest/coverage-v8": "^4.1.9",
+    "@vitest/ui": "^4.1.9",
     "eslint": "^9.39.4",
     "eslint-config-next": "16.2.9",
     "jsdom": "^29.1.1",
