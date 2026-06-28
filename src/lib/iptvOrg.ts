@@ -208,11 +208,7 @@ function resolveStreamsForIds(
   const seen = new Set<string>();
   const resolved: StreamSource[] = [];
 
-  for (const iptvId of iptvIds) {
-    const candidates = streams
-      .filter((s) => s.channel === iptvId && isUsableStreamUrl(s.url))
-      .sort((a, b) => scoreStream(b) - scoreStream(a));
-
+  function addCandidates(candidates: IptvStream[]): boolean {
     for (const candidate of candidates) {
       if (seen.has(candidate.url)) continue;
       seen.add(candidate.url);
@@ -221,8 +217,17 @@ function resolveStreamsForIds(
         codec: inferCodec(candidate.url, candidate),
         isBackup: resolved.length > 0,
       });
-      if (resolved.length >= MAX_CANDIDATES_PER_CHANNEL) return resolved;
+      if (resolved.length >= MAX_CANDIDATES_PER_CHANNEL) return true;
     }
+    return false;
+  }
+
+  for (const iptvId of iptvIds) {
+    const candidates = streams
+      .filter((s) => s.channel === iptvId && isUsableStreamUrl(s.url))
+      .sort((a, b) => scoreStream(b) - scoreStream(a));
+
+    if (addCandidates(candidates)) return resolved;
   }
 
   for (const title of titleFallbacks) {
@@ -236,16 +241,7 @@ function resolveStreamsForIds(
       )
       .sort((a, b) => scoreStream(b) - scoreStream(a));
 
-    for (const candidate of candidates) {
-      if (seen.has(candidate.url)) continue;
-      seen.add(candidate.url);
-      resolved.push({
-        url: candidate.url,
-        codec: inferCodec(candidate.url, candidate),
-        isBackup: resolved.length > 0,
-      });
-      if (resolved.length >= MAX_CANDIDATES_PER_CHANNEL) return resolved;
-    }
+    if (addCandidates(candidates)) return resolved;
   }
 
   return resolved;
