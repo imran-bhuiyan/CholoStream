@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import dns from 'node:dns';
+import net from 'node:net';
+import ipaddr from 'ipaddr.js';
 
 // Simple in-memory rate limiter
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
@@ -27,24 +30,51 @@ setInterval(() => {
   }
 }, 60_000);
 
-const PRIVATE_HOST_PATTERNS = [
-  /^localhost$/i,
-  /^127\./,
-  /^10\./,
-  /^192\.168\./,
-  /^172\.(1[6-9]|2\d|3[0-1])\./,
-  /^169\.254\./,
-  /^\[?::1\]?$/i,
-  /^0\.0\.0\.0$/,
-];
+function isSafeIP(ipStr: string): boolean {
+  try {
+    const addr = ipaddr.process(ipStr);
+    const range = addr.range();
+    if (range === 'unicast') return true;
+    if (range === 'ipv4Mapped') {
+      const ipv4 = (addr as ipaddr.IPv6).toIPv4Address();
+      return ipv4.range() === 'unicast';
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
 
-function isSafeTargetUrl(value: string): URL | null {
+function isSafeTargetUrlSync(value: string): URL | null {
   try {
     const url = new URL(value);
-    const isHttp = url.protocol === 'http:' || url.protocol === 'https:';
-    const isPrivateHost = PRIVATE_HOST_PATTERNS.some((pattern) => pattern.test(url.hostname));
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
 
-    if (!isHttp || isPrivateHost) {
+    if (url.hostname === 'localhost' || url.hostname === 'host.docker.internal') {
+      return null;
+    }
+
+    if (net.isIP(url.hostname) && !isSafeIP(url.hostname)) {
+      return null;
+    }
+
+    return url;
+  } catch {
+    return null;
+  }
+}
+
+async function getSafeTargetUrlAsync(value: string): Promise<URL | null> {
+  const url = isSafeTargetUrlSync(value);
+  if (!url) return null;
+
+  try {
+    const hostnameToLookup = url.hostname.startsWith('[') && url.hostname.endsWith(']')
+      ? url.hostname.slice(1, -1)
+      : url.hostname;
+
+    const lookup = await dns.promises.lookup(hostnameToLookup);
+    if (!isSafeIP(lookup.address)) {
       return null;
     }
 
@@ -105,7 +135,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     return new NextResponse('Missing url parameter', { status: 400 });
   }
 
-  const safeTargetUrl = isSafeTargetUrl(targetUrl);
+  const safeTargetUrl = await getSafeTargetUrlAsync(targetUrl);
 
   if (!safeTargetUrl) {
     return new NextResponse('Unsupported or disallowed stream URL', {
@@ -129,9 +159,28 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       headers: {
         ...Object.fromEntries(requestHeaders),
       },
-      redirect: 'follow',
+      redirect: 'manual',
       signal: AbortSignal.timeout(STREAM_FETCH_TIMEOUT_MS),
     });
+
+    // Handle redirects manually to prevent SSRF via redirect
+    if (response.status >= 300 && response.status < 400) {
+      const location = response.headers.get('location');
+      if (!location) {
+         return new NextResponse('Redirect missing location', { status: 502 });
+      }
+
+      const absoluteLocation = new URL(location, safeTargetUrl.href).href;
+      if (!(await getSafeTargetUrlAsync(absoluteLocation))) {
+         return new NextResponse('Redirect to unsafe target', { status: 403 });
+      }
+
+      // Instead of recursively fetching, return 302 to the client to let them handle the redirect via proxy
+      return NextResponse.redirect(`${new URL(request.url).origin}/api/proxy?url=${encodeURIComponent(absoluteLocation)}`, {
+         status: 302,
+         headers: CORS_HEADERS
+      });
+    }
 
     if (!response.ok) {
       return new NextResponse(`Proxy fetch failed: ${response.statusText}`, {
@@ -176,7 +225,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
           return trimmed.replace(/(URI=")([^"]+)(")/gi, (match, p1, p2, p3) => {
             try {
               const absoluteUrl = new URL(p2, baseUrl).href;
-              if (isSafeTargetUrl(absoluteUrl)) {
+              if (isSafeTargetUrlSync(absoluteUrl)) {
                 return `${p1}${origin}/api/proxy?url=${encodeURIComponent(absoluteUrl)}${p3}`;
               }
             } catch {
@@ -193,7 +242,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         // Rewrite segment/track URLs
         try {
           const absoluteUrl = new URL(trimmed, baseUrl).href;
-          return isSafeTargetUrl(absoluteUrl)
+          return isSafeTargetUrlSync(absoluteUrl)
             ? `${origin}/api/proxy?url=${encodeURIComponent(absoluteUrl)}`
             : line;
         } catch {

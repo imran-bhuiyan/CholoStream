@@ -1,15 +1,33 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
-import type { Channel, StreamSource } from '@/types/stream';
-import { Search, Star, Tv, Award, Radio, Film, Globe, WifiOff } from 'lucide-react';
-import ChannelLogo from './ChannelLogo';
+import React from 'react';
+import type { Channel } from '@/types/stream';
+import { Search, Star, Tv, Award, Radio, Film, Globe } from 'lucide-react';
+import { useChannelFilters } from '@/hooks/useChannelFilters';
+import ChannelCard from './ChannelCard';
 
 interface ChannelGridProps {
   channels: Channel[];
   selectedChannelId: string;
   onSelectChannel: (channelId: string) => void;
 }
+
+const CATEGORIES = ['All', 'Sports', 'News', 'Entertainment', 'International'];
+
+const getCategoryIcon = (category: string) => {
+  switch (category) {
+    case 'Sports':
+      return <Award className="h-4 w-4 text-violet-400" />;
+    case 'News':
+      return <Radio className="h-4 w-4 text-blue-450" />;
+    case 'Entertainment':
+      return <Film className="h-4 w-4 text-emerald-450" />;
+    case 'International':
+      return <Globe className="h-4 w-4 text-cyan-400" />;
+    default:
+      return <Tv className="h-4 w-4 text-slate-400" />;
+  }
+};
 
 export default function ChannelGrid({
   channels,
@@ -27,8 +45,8 @@ export default function ChannelGrid({
       if (stored) {
         queueMicrotask(() => setFavorites(JSON.parse(stored)));
       }
-    } catch (e) {
-      console.warn('Could not load favorites from localStorage', e);
+    } catch {
+      // Silently ignore localStorage errors (e.g., in incognito mode or if disabled)
     }
   }, []);
 
@@ -42,7 +60,7 @@ export default function ChannelGrid({
     try {
       localStorage.setItem('cholostream_favorites', JSON.stringify(nextFavorites));
     } catch (err) {
-      console.error(err);
+      console.warn('Could not save favorites to localStorage', err);
     }
   };
 
@@ -77,8 +95,9 @@ export default function ChannelGrid({
     const starredList: Channel[] = [];
     const unstarredList: Channel[] = [];
 
+    const favoritesSet = new Set(favorites);
     filteredChannels.forEach(channel => {
-      if (favorites.includes(channel.id)) {
+      if (favoritesSet.has(channel.id)) {
         starredList.push(channel);
       } else {
         unstarredList.push(channel);
@@ -95,7 +114,7 @@ export default function ChannelGrid({
     <div className="space-y-6 flex flex-col h-full w-full">
       
       {/* Controls: Search and Categories */}
-      <div className="space-y-4">
+      <div className="space-y-4 sticky top-0 z-20 bg-black/95 backdrop-blur-md pt-2 pb-3 -mx-2 px-2 rounded-xl">
         {/* Search */}
         <div className="relative">
           <Search className="absolute left-3.5 top-2.5 h-4.5 w-4.5 text-slate-550" />
@@ -110,7 +129,7 @@ export default function ChannelGrid({
 
         {/* Categories Pills */}
         <div className="flex space-x-1.5 overflow-x-auto pb-1.5 scrollbar-none">
-          {categories.map((category) => (
+          {CATEGORIES.map((category) => (
             <button
               key={category}
               onClick={() => setActiveCategory(category)}
@@ -138,53 +157,16 @@ export default function ChannelGrid({
           </div>
           
           <div className="grid grid-cols-2 gap-2.5">
-            {starred.map((channel) => {
-              const isSelected = channel.id === selectedChannelId;
-              const isOffline = channel.sources.length === 0;
-              
-              return (
-                <div
-                  key={channel.id}
-                  onClick={() => onSelectChannel(channel.id)}
-                  className={`
-                    flex items-center justify-between p-3 rounded-2xl border cursor-pointer transition-all duration-300 select-none relative overflow-hidden group
-                    ${isOffline
-                      ? 'opacity-40 grayscale bg-white/[0.01] border-white/5 cursor-default'
-                      : isSelected 
-                      ? 'bg-violet-600/20 border-violet-500/50 text-white shadow-[0_0_15px_rgba(124,58,237,0.3)] scale-[1.02] z-10' 
-                      : 'bg-white/[0.02] border-white/5 hover:border-white/10 hover:bg-white/[0.04] text-slate-400 hover:text-slate-200 hover:scale-[1.01]'
-                    }
-                  `}
-                >
-                  <div className="flex items-center space-x-2.5 min-w-0">
-                    <ChannelLogo channel={channel} size={32} className="rounded-lg" />
-                    <div className="min-w-0">
-                      <h5 className="text-[11px] font-bold truncate pr-3">{channel.name}</h5>
-                      <span className="text-[9px] text-slate-500 font-semibold">
-                        {isOffline ? (
-                          <span className="flex items-center space-x-1 text-rose-400/80">
-                            <WifiOff className="h-2.5 w-2.5" />
-                            <span>Offline</span>
-                          </span>
-                        ) : channel.category}
-                      </span>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={(e) => toggleFavorite(channel.id, e)}
-                    className="p-1 hover:bg-slate-850 rounded text-amber-400 hover:text-amber-500 transition-colors z-10"
-                    aria-label="Remove from favorites"
-                  >
-                    <Star className="h-3.5 w-3.5 fill-current" />
-                  </button>
-                  
-                  {isSelected && !isOffline && (
-                    <span className="absolute bottom-0 right-0 w-2 h-2 bg-emerald-500 rounded-tl-lg" />
-                  )}
-                </div>
-              );
-            })}
+            {starred.map((channel) => (
+              <ChannelCard
+                key={channel.id}
+                channel={channel}
+                isSelected={channel.id === selectedChannelId}
+                onSelect={onSelectChannel}
+                onToggleFavorite={toggleFavorite}
+                variant="compact"
+              />
+            ))}
           </div>
         </div>
       )}
@@ -199,85 +181,16 @@ export default function ChannelGrid({
           </div>
         ) : (
           <div className="space-y-1.5">
-            {unstarred.map((channel) => {
-              const isSelected = channel.id === selectedChannelId;
-              const isOffline = channel.sources.length === 0;
-              const hasHEVC = channel.sources.some((s: StreamSource) => s.codec === 'HEVC');
-              const hasMPEGTS = channel.sources.some((s: StreamSource) => s.codec === 'MPEGTS');
-              
-              return (
-                <div
-                  key={channel.id}
-                  onClick={() => onSelectChannel(channel.id)}
-                  className={`
-                    w-full flex items-center justify-between p-3 rounded-2xl border cursor-pointer transition-all duration-300 group text-left select-none relative overflow-hidden
-                    ${isOffline
-                      ? 'opacity-40 grayscale bg-white/[0.01] border-white/5 cursor-default'
-                      : isSelected 
-                      ? 'bg-violet-600/20 border-violet-500/50 text-white shadow-[0_0_15px_rgba(124,58,237,0.3)] scale-[1.02] z-10' 
-                      : 'bg-white/[0.02] border-white/5 hover:border-white/10 hover:bg-white/[0.04] text-slate-400 hover:text-slate-200 hover:scale-[1.01]'
-                    }
-                  `}
-                >
-                  <div className="flex items-center space-x-3 min-w-0">
-                    <div className="relative flex-shrink-0">
-                      <ChannelLogo channel={channel} size={36} className="rounded-xl" />
-                      {isSelected && !isOffline && (
-                        <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-[#0a0c10] rounded-full" />
-                      )}
-                    </div>
-
-                    <div className="min-w-0">
-                      <h4 className={`text-xs font-bold truncate ${isSelected && !isOffline ? 'text-slate-100 font-bold' : 'text-slate-350'}`}>
-                        {channel.name}
-                      </h4>
-                      <p className="text-[10px] text-slate-500 font-semibold mt-0.5">
-                        {isOffline ? (
-                          <span className="flex items-center space-x-1 text-rose-400/80">
-                            <WifiOff className="h-2.5 w-2.5" />
-                            <span>Offline</span>
-                          </span>
-                        ) : channel.category}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    {/* Technical badges */}
-                    <div className="flex flex-col items-end space-y-0.5">
-                      {isOffline && (
-                        <span className="text-[8px] font-black text-rose-400/90 bg-rose-500/10 px-1 py-0.5 rounded border border-rose-500/10">
-                          OFFLINE
-                        </span>
-                      )}
-                      {!isOffline && hasHEVC && (
-                        <span className="text-[8px] font-black text-amber-400/90 bg-amber-500/10 px-1 py-0.5 rounded border border-amber-500/10">
-                          HEVC
-                        </span>
-                      )}
-                      {!isOffline && hasMPEGTS && (
-                        <span className="text-[8px] font-black text-cyan-400/90 bg-cyan-500/10 px-1 py-0.5 rounded border border-cyan-500/10">
-                          TS
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Star favorite toggle */}
-                    <button
-                      onClick={(e) => toggleFavorite(channel.id, e)}
-                      className="p-1 hover:bg-slate-850 rounded text-slate-650 hover:text-amber-400 transition-colors"
-                      aria-label="Add to favorites"
-                    >
-                      <Star className="h-3.5 w-3.5 hover:scale-105 transition-transform" />
-                    </button>
-                  </div>
-                  
-                  {isSelected && !isOffline && (
-                    <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-tl-lg" />
-                  )}
-                </div>
-              );
-            })}
+            {unstarred.map((channel) => (
+              <ChannelCard
+                key={channel.id}
+                channel={channel}
+                isSelected={channel.id === selectedChannelId}
+                onSelect={onSelectChannel}
+                onToggleFavorite={toggleFavorite}
+                variant="default"
+              />
+            ))}
           </div>
         )}
       </div>

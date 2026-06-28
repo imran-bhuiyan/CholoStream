@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "vitest"
+    "test": "vitest run"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.101.0",
@@ -14,6 +16,7 @@
     "@tanstack/react-virtual": "^3.14.3",
     "clsx": "^2.1.1",
     "hls.js": "^1.6.16",
+    "ipaddr.js": "^2.4.0",
     "lucide-react": "^1.20.0",
     "mpegts.js": "^1.8.0",
     "next": "16.2.9",
@@ -26,9 +29,14 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^6.0.3",
+    "@vitest/coverage-v8": "^4.1.9",
+    "@vitest/ui": "^4.1.9",
     "eslint": "^9.39.4",
     "eslint-config-next": "16.2.9",
+    "jsdom": "^29.1.1",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.9"
   }
 }
