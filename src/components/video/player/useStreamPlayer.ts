@@ -17,6 +17,8 @@ interface UseStreamPlayerProps {
   setIsPlaying: (playing: boolean) => void;
   hlsRef: React.MutableRefObject<Hls | null>;
   mpegtsRef: React.MutableRefObject<mpegts.Player | null>;
+  isMuted: boolean;
+  setIsMuted: (muted: boolean) => void;
 }
 
 export function useStreamPlayer({
@@ -32,10 +34,14 @@ export function useStreamPlayer({
   setIsPlaying,
   hlsRef,
   mpegtsRef,
+  isMuted,
+  setIsMuted,
 }: UseStreamPlayerProps) {
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !activeSource || !streamUrl) return;
+
+    video.muted = isMuted;
 
     let localDestroyed = false;
     isDestroyedRef.current = false;
@@ -90,10 +96,34 @@ export function useStreamPlayer({
           if (localDestroyed) return;
           if (HlsClass.isSupported()) {
             const hls = new HlsClass({
-              maxBufferLength: 8,
-              maxMaxBufferLength: 15,
               enableWorker: true,
               lowLatencyMode: true,
+              // Larger buffer tolerates brief CDN hiccups (e.g. Caracol TV's Akamai origin)
+              maxBufferLength: 8,
+              maxMaxBufferLength: 16,
+              maxBufferSize: 10 * 1024 * 1024,
+              // Relaxed live-sync: stay further from the live edge to absorb jitter
+              liveSyncDuration: 5,
+              liveMaxLatencyDuration: 12,
+              progressive: true,
+              capLevelToPlayerSize: true,
+              // Retry policies: 3 attempts with 500ms back-off before declaring fatal
+              fragLoadPolicy: {
+                default: {
+                  maxTimeToFirstByteMs: 20000,
+                  maxLoadTimeMs: 30000,
+                  timeoutRetry: { maxNumRetry: 3, retryDelayMs: 500, maxRetryDelayMs: 2000 },
+                  errorRetry: { maxNumRetry: 3, retryDelayMs: 500, maxRetryDelayMs: 2000 },
+                },
+              },
+              manifestLoadPolicy: {
+                default: {
+                  maxTimeToFirstByteMs: 20000,
+                  maxLoadTimeMs: 20000,
+                  timeoutRetry: { maxNumRetry: 3, retryDelayMs: 500, maxRetryDelayMs: 2000 },
+                  errorRetry: { maxNumRetry: 3, retryDelayMs: 500, maxRetryDelayMs: 2000 },
+                },
+              },
             });
             hlsRef.current = hls;
 
@@ -105,7 +135,14 @@ export function useStreamPlayer({
               addLog('HLS.js: Stream loaded and parsed.', 'success');
               video.play()
                 .then(() => setIsPlaying(true))
-                .catch((e: Error) => addLog(`Play deferred: ${e.message}`, 'warn'));
+                .catch((e: Error) => {
+                  addLog(`Play deferred: ${e.message}. Retrying muted...`, 'warn');
+                  video.muted = true;
+                  setIsMuted(true);
+                  video.play()
+                    .then(() => setIsPlaying(true))
+                    .catch(() => {});
+                });
             });
 
             hls.on(HlsClass.Events.ERROR, (event: string, data: ErrorData) => {
@@ -127,7 +164,15 @@ export function useStreamPlayer({
           } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
             addLog('HLS.js unavailable. Using native safari player.', 'info');
             video.src = streamUrl;
-            video.play().then(() => setIsPlaying(true)).catch(() => {});
+            video.play()
+              .then(() => setIsPlaying(true))
+              .catch(() => {
+                video.muted = true;
+                setIsMuted(true);
+                video.play()
+                  .then(() => setIsPlaying(true))
+                  .catch(() => {});
+              });
           } else {
             selectNextSource('HLS unsupported on this client');
           }
@@ -145,6 +190,11 @@ export function useStreamPlayer({
             }, {
               enableStashBuffer: false,
               liveBufferLatencyChasing: true,
+              liveBufferLatencyMaxLatency: 2.0,
+              autoCleanupSourceBuffer: true,
+              autoCleanupMaxBackwardDuration: 4,
+              autoCleanupMinBackwardDuration: 2,
+              stashInitialSize: 32 * 1024,
             });
             mpegtsRef.current = player;
 
@@ -160,7 +210,17 @@ export function useStreamPlayer({
                   addLog('MPEG-TS.js: Playback initialized.', 'success');
                 })
                 .catch((err: Error) => {
-                  addLog(`MPEG-TS play failure: ${err.message}`, 'warn');
+                  addLog(`MPEG-TS play failure: ${err.message}. Retrying muted...`, 'warn');
+                  video.muted = true;
+                  setIsMuted(true);
+                  const retryPromise = player.play();
+                  if (retryPromise) {
+                    retryPromise
+                      .then(() => setIsPlaying(true))
+                      .catch(() => {});
+                  } else {
+                    setIsPlaying(true);
+                  }
                 });
             } else {
               setIsPlaying(true);
@@ -186,7 +246,15 @@ export function useStreamPlayer({
           }
         } else {
           video.src = streamUrl;
-          video.play().then(() => setIsPlaying(true)).catch(() => {});
+          video.play()
+            .then(() => setIsPlaying(true))
+            .catch(() => {
+              video.muted = true;
+              setIsMuted(true);
+              video.play()
+                .then(() => setIsPlaying(true))
+                .catch(() => {});
+            });
         }
       } catch (err: unknown) {
         const error = err as Error;
@@ -214,6 +282,8 @@ export function useStreamPlayer({
     isDestroyedRef,
     mpegtsRef,
     setIsPlaying,
-    videoRef
+    videoRef,
+    isMuted,
+    setIsMuted,
   ]);
 }

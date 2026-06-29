@@ -3,8 +3,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import type { Channel } from '@/types/stream';
 import { Search, Star, Tv, Award, Radio, Film, Globe } from 'lucide-react';
-import { useChannelFilters } from '@/hooks/useChannelFilters';
 import ChannelCard from './ChannelCard';
+import ChannelCarousel from './ChannelCarousel';
+import { useDragScroll } from '@/hooks/useDragScroll';
 
 interface ChannelGridProps {
   channels: Channel[];
@@ -12,30 +13,13 @@ interface ChannelGridProps {
   onSelectChannel: (channelId: string) => void;
 }
 
-const CATEGORIES = ['All', 'Sports', 'News', 'Entertainment', 'International'];
-
-const getCategoryIcon = (category: string) => {
-  switch (category) {
-    case 'Sports':
-      return <Award className="h-4 w-4 text-violet-400" />;
-    case 'News':
-      return <Radio className="h-4 w-4 text-blue-450" />;
-    case 'Entertainment':
-      return <Film className="h-4 w-4 text-emerald-450" />;
-    case 'International':
-      return <Globe className="h-4 w-4 text-cyan-400" />;
-    default:
-      return <Tv className="h-4 w-4 text-slate-400" />;
-  }
-};
-
 export default function ChannelGrid({
   channels,
   selectedChannelId,
   onSelectChannel
 }: ChannelGridProps) {
+  const favoritesDragScroll = useDragScroll();
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeCategory, setActiveCategory] = useState<string>('All');
   const [favorites, setFavorites] = useState<string[]>([]);
 
   // Safe localStorage reading on mount
@@ -64,31 +48,12 @@ export default function ChannelGrid({
     }
   };
 
-  const categories = ['All', 'Sports', 'News', 'Entertainment', 'International'];
-
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case 'Sports':
-        return <Award className="h-4 w-4 text-violet-400" />;
-      case 'News':
-        return <Radio className="h-4 w-4 text-blue-450" />;
-      case 'Entertainment':
-        return <Film className="h-4 w-4 text-emerald-450" />;
-      case 'International':
-        return <Globe className="h-4 w-4 text-cyan-400" />;
-      default:
-        return <Tv className="h-4 w-4 text-slate-400" />;
-    }
-  };
-
-  // Filter channels based on query & category
+  // Filter channels based on query
   const filteredChannels = useMemo(() => {
     return channels.filter(channel => {
-      const matchesSearch = channel.name.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesCategory = activeCategory === 'All' || channel.category === activeCategory;
-      return matchesSearch && matchesCategory;
+      return channel.name.toLowerCase().includes(searchQuery.toLowerCase());
     });
-  }, [channels, searchQuery, activeCategory]);
+  }, [channels, searchQuery]);
 
   // Separate starred channels that match the current filters
   const { starred, unstarred } = useMemo(() => {
@@ -110,11 +75,24 @@ export default function ChannelGrid({
     };
   }, [filteredChannels, favorites]);
 
+  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    const container = e.currentTarget;
+    if (e.deltaY === 0) return;
+    const maxScrollLeft = container.scrollWidth - container.clientWidth;
+    const canScrollRight = e.deltaY > 0 && container.scrollLeft < maxScrollLeft - 1;
+    const canScrollLeft = e.deltaY < 0 && container.scrollLeft > 1;
+
+    if (canScrollRight || canScrollLeft) {
+      e.preventDefault();
+      container.scrollLeft += e.deltaY;
+    }
+  };
+
   return (
     <div className="space-y-6 flex flex-col h-full w-full">
       
-      {/* Controls: Search and Categories */}
-      <div className="space-y-4 sticky top-0 z-20 bg-black/95 backdrop-blur-md pt-2 pb-3 -mx-2 px-2 rounded-xl">
+      {/* Controls: Search */}
+      <div className="space-y-4 sticky top-0 z-20 bg-background/95 backdrop-blur-md pt-2 pb-3 -mx-2 px-2 rounded-xl border-b lg:border-none border-white/5">
         {/* Search */}
         <div className="relative">
           <Search className="absolute left-3.5 top-2.5 h-4.5 w-4.5 text-slate-550" />
@@ -123,74 +101,69 @@ export default function ChannelGrid({
             placeholder="Search channels..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-[#121620] border border-slate-800 rounded-xl py-2 pl-10 pr-4 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-violet-550/40"
+            className="w-full bg-surface-container border border-outline-variant rounded-xl py-2 pl-10 pr-4 text-sm text-on-surface placeholder-on-surface-variant focus:outline-none focus:border-secondary-fixed/50 transition-colors"
           />
-        </div>
-
-        {/* Categories Pills */}
-        <div className="flex space-x-1.5 overflow-x-auto pb-1.5 scrollbar-none">
-          {CATEGORIES.map((category) => (
-            <button
-              key={category}
-              onClick={() => setActiveCategory(category)}
-              className={`
-                flex items-center space-x-1 px-3 py-1.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide whitespace-nowrap transition-all duration-200
-                ${activeCategory === category 
-                  ? 'bg-violet-650 text-white shadow-md border border-violet-550/30' 
-                  : 'bg-[#121620] text-slate-400 hover:text-slate-200 border border-slate-800/80 hover:border-slate-700/50'
-                }
-              `}
-            >
-              {category !== 'All' && getCategoryIcon(category)}
-              <span>{category}</span>
-            </button>
-          ))}
         </div>
       </div>
 
-      {/* Starred Bubbled Section */}
-      {starred.length > 0 && (
-        <div className="space-y-2.5 animate-fade-in">
-          <div className="flex items-center space-x-1 text-amber-400">
-            <Star className="h-3.5 w-3.5 fill-current" />
-            <h4 className="text-[10px] font-black uppercase tracking-wider text-slate-400">Favorites / Starred</h4>
+      {/* Main Channels Section */}
+      <div className="flex-1 overflow-y-auto min-h-0 space-y-6 pb-20 scrollbar-none">
+        
+        {/* Starred Bubbled Section (Always top if exists) */}
+        {starred.length > 0 && (
+          <div className="space-y-2.5 animate-fade-in mb-4">
+            <div className="flex items-center space-x-1 text-amber-400 px-1">
+              <Star className="h-3.5 w-3.5 fill-current" />
+              <h4 className="text-[10px] font-black uppercase tracking-wider text-slate-400">Favorites</h4>
+            </div>
+            
+            <div
+              ref={favoritesDragScroll.ref}
+              onMouseDown={favoritesDragScroll.onMouseDown}
+              onMouseMove={favoritesDragScroll.onMouseMove}
+              onMouseUp={favoritesDragScroll.onMouseUp}
+              onMouseLeave={favoritesDragScroll.onMouseLeave}
+              onWheel={handleWheel}
+              className="flex overflow-x-auto snap-x snap-mandatory gap-3 pb-3 scrollbar-none -mx-2 px-2 md:mx-0 md:px-0 active:cursor-grabbing cursor-grab"
+            >
+              {starred.map((channel) => (
+                <div key={channel.id} className="w-[180px] md:w-[200px] shrink-0 snap-start">
+                  <ChannelCard
+                    channel={channel}
+                    isSelected={channel.id === selectedChannelId}
+                    onSelect={onSelectChannel}
+                    onToggleFavorite={toggleFavorite}
+                    variant="compact"
+                  />
+                </div>
+              ))}
+            </div>
           </div>
-          
-          <div className="grid grid-cols-2 gap-2.5">
-            {starred.map((channel) => (
-              <ChannelCard
-                key={channel.id}
-                channel={channel}
-                isSelected={channel.id === selectedChannelId}
-                onSelect={onSelectChannel}
-                onToggleFavorite={toggleFavorite}
-                variant="compact"
-              />
-            ))}
-          </div>
-        </div>
-      )}
+        )}
 
-      {/* Main Channels list grid */}
-      <div className="flex-1 overflow-y-auto min-h-0 space-y-2 scrollbar-thin scrollbar-thumb-slate-900 scrollbar-track-transparent">
-        <h4 className="text-[10px] font-black uppercase tracking-wider text-slate-500">Channels List</h4>
         {unstarred.length === 0 && starred.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-10 text-center">
             <Tv className="h-8 w-8 text-slate-700 mb-2" />
             <p className="text-xs text-slate-500">No channels found</p>
           </div>
         ) : (
-          <div className="space-y-1.5">
-            {unstarred.map((channel) => (
-              <ChannelCard
-                key={channel.id}
-                channel={channel}
-                isSelected={channel.id === selectedChannelId}
-                onSelect={onSelectChannel}
-                onToggleFavorite={toggleFavorite}
-                variant="default"
-              />
-            ))}
+          /* Render simple list of channels */
+          <div className="space-y-2.5 animate-fade-in">
+            <h4 className="text-[10px] font-black uppercase tracking-wider text-slate-500 px-1">
+              {searchQuery ? 'Search Results' : 'All Channels'}
+            </h4>
+            <div className="space-y-1.5">
+              {unstarred.map((channel) => (
+                <ChannelCard
+                  key={channel.id}
+                  channel={channel}
+                  isSelected={channel.id === selectedChannelId}
+                  onSelect={onSelectChannel}
+                  onToggleFavorite={toggleFavorite}
+                  variant="default"
+                />
+              ))}
+            </div>
           </div>
         )}
       </div>

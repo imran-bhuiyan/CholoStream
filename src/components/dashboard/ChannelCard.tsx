@@ -28,35 +28,35 @@ export default function ChannelCard({
     <div
       onClick={() => onSelect(channel.id)}
       className={`
-        w-full flex items-center justify-between p-3 rounded-2xl border cursor-pointer transition-all duration-300 group text-left select-none relative overflow-hidden
+        w-full flex items-center justify-between p-3 rounded-lg cursor-pointer transition-all duration-300 group text-left select-none relative overflow-hidden animate-fade-in-up
         ${
           isOffline
-            ? 'opacity-40 grayscale bg-white/[0.01] border-white/5 cursor-default'
+            ? 'opacity-40 grayscale bg-surface-container-lowest border border-white/5 cursor-default'
             : isSelected
-            ? 'bg-violet-600/20 border-violet-500/50 text-white shadow-[0_0_15px_rgba(124,58,237,0.3)] scale-[1.02] z-10'
-            : 'bg-white/[0.02] border-white/5 hover:border-white/10 hover:bg-white/[0.04] text-slate-400 hover:text-slate-200 hover:scale-[1.01]'
+            ? 'bg-secondary-fixed/10 border border-secondary-fixed selected-glow text-secondary scale-[1.02] z-10 shadow-[0_0_25px_rgba(195,244,0,0.25)]'
+            : 'glass-panel glass-panel-hover text-on-surface-variant hover:text-on-surface hover:scale-[1.01] border border-white/5'
         }
       `}
     >
       <div className={`flex items-center ${isCompact ? 'space-x-2.5' : 'space-x-3'} min-w-0`}>
         <div className="relative flex-shrink-0">
-          <ChannelLogo channel={channel} size={isCompact ? 32 : 36} className={isCompact ? 'rounded-lg' : 'rounded-xl'} />
+          <ChannelLogo channel={channel} size={isCompact ? 32 : 36} className="rounded-md border border-white/10" />
           {isSelected && !isOffline && !isCompact && (
-            <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-[#0a0c10] rounded-full" />
+            <span className="absolute -bottom-1 -right-1 w-3 h-3 bg-secondary-fixed border-2 border-background rounded-full shadow-[0_0_10px_rgba(195,244,0,0.8)]" />
           )}
         </div>
 
         <div className="min-w-0">
           <h4
-            className={`truncate ${
-              isCompact ? 'text-[11px] font-bold pr-3' : 'text-xs font-bold'
-            } ${isSelected && !isOffline && !isCompact ? 'text-slate-100' : 'text-slate-350'}`}
+            className={`truncate font-headline-lg uppercase ${
+              isCompact ? 'text-[16px] leading-[18px] pr-3' : 'text-[20px] leading-[22px]'
+            } ${isSelected && !isOffline && !isCompact ? 'text-secondary' : 'text-on-surface'}`}
           >
             {channel.name}
           </h4>
-          <p className={`${isCompact ? 'text-[9px]' : 'text-[10px]'} text-slate-500 font-semibold mt-0.5`}>
+          <p className={`font-body-md uppercase tracking-wider ${isCompact ? 'text-[9px]' : 'text-[11px]'} text-on-surface-variant font-semibold mt-0.5`}>
             {isOffline ? (
-              <span className="flex items-center space-x-1 text-rose-400/80">
+              <span className="flex items-center space-x-1 text-error">
                 <WifiOff className="h-2.5 w-2.5" />
                 <span>Offline</span>
               </span>
@@ -72,17 +72,17 @@ export default function ChannelCard({
         {!isCompact && (
           <div className="flex flex-col items-end space-y-0.5">
             {isOffline && (
-              <span className="text-[8px] font-black text-rose-400/90 bg-rose-500/10 px-1 py-0.5 rounded border border-rose-500/10">
+              <span className="font-label-caps text-[8px] bg-error-container text-on-error-container px-1.5 py-0.5 rounded-sm border border-error/20">
                 OFFLINE
               </span>
             )}
             {!isOffline && hasHEVC && (
-              <span className="text-[8px] font-black text-amber-400/90 bg-amber-500/10 px-1 py-0.5 rounded border border-amber-500/10">
+              <span className="font-label-caps text-[8px] bg-secondary-container/20 text-secondary-fixed px-1.5 py-0.5 rounded-sm border border-secondary-fixed/20">
                 HEVC
               </span>
             )}
             {!isOffline && hasMPEGTS && (
-              <span className="text-[8px] font-black text-cyan-400/90 bg-cyan-500/10 px-1 py-0.5 rounded border border-cyan-500/10">
+              <span className="font-label-caps text-[8px] bg-primary-container/20 text-primary px-1.5 py-0.5 rounded-sm border border-primary/20">
                 TS
               </span>
             )}
@@ -92,8 +92,8 @@ export default function ChannelCard({
         {/* Star favorite toggle */}
         <button
           onClick={(e) => onToggleFavorite(channel.id, e)}
-          className={`p-1 hover:bg-slate-850 rounded transition-colors ${
-            isCompact ? 'text-amber-400 hover:text-amber-500' : 'text-slate-650 hover:text-amber-400'
+          className={`p-1 hover:bg-surface-container-high rounded transition-colors ${
+            isCompact ? 'text-secondary-fixed hover:text-secondary-fixed' : 'text-outline hover:text-secondary-fixed'
           }`}
           aria-label="Toggle favorite"
         >
@@ -102,7 +102,7 @@ export default function ChannelCard({
       </div>
 
       {isSelected && !isOffline && (
-        <span className={`absolute bottom-0 right-0 bg-emerald-500 rounded-tl-lg ${isCompact ? 'w-2 h-2' : 'w-2.5 h-2.5'}`} />
+        <span className={`absolute top-0 right-0 live-pulse bg-secondary-fixed rounded-bl-lg ${isCompact ? 'w-2 h-2' : 'w-3 h-3'}`} />
       )}
     </div>
   );

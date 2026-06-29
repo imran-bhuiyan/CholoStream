@@ -122,18 +122,7 @@ export const CHANNEL_CATALOG: ChannelCatalogEntry[] = [
     category: 'Sports',
     iptvIds: ['BBCOne.uk'],
   },
-  {
-    id: 'somoy-tv',
-    name: 'Somoy TV',
-    category: 'News',
-    iptvIds: ['SomoyNewsTV.bd'],
-  },
-  {
-    id: 'zee-bangla',
-    name: 'Zee Bangla',
-    category: 'Entertainment',
-    iptvIds: ['AamarBangla.in', 'AnmolTV.in'],
-  },
+
   {
     id: 'eurosport',
     name: 'Eurosport',
@@ -158,19 +147,7 @@ export const CHANNEL_CATALOG: ChannelCatalogEntry[] = [
     category: 'Sports',
     iptvIds: ['FoxSports2.us', 'FoxSports1.us', 'FoxSports.ar'],
   },
-  {
-    id: 'bbc-world-news',
-    name: 'BBC World News',
-    category: 'International',
-    iptvIds: ['BBCNews.uk'],
-  },
-  {
-    id: 'hbo',
-    name: 'HBO Movies',
-    category: 'Entertainment',
-    iptvIds: ['HBO.us'],
-    titleFallbacks: ['HBO Boxing', 'HBO'],
-  },
+
   {
     id: 't-sports',
     name: 'T Sports',
@@ -179,17 +156,40 @@ export const CHANNEL_CATALOG: ChannelCatalogEntry[] = [
     titleFallbacks: ['T Sports'],
   },
   {
-    id: 'jamuna-tv',
-    name: 'Jamuna TV',
-    category: 'News',
-    iptvIds: ['JamunaTV.bd'],
+    id: 'btv-national',
+    name: 'BTV National',
+    category: 'Sports',
+    iptvIds: ['BTVNational.bd', 'BTVWorld.bd'],
+    titleFallbacks: ['BTV', 'BTV National', 'BTV World'],
   },
+  {
+    id: 'rtb-go',
+    name: 'RTB Go',
+    category: 'Sports',
+    iptvIds: ['RTBGo.bn', 'RTBAneka.bn', 'RTBSukmaindera.bn'],
+    titleFallbacks: ['RTB Go', 'RTB Aneka', 'RTB Sukmaindera'],
+  },
+
   {
     id: 'caracol-tv',
     name: 'Caracol TV',
     category: 'Sports',
-    iptvIds: ['CaracolTV.co'],
-    titleFallbacks: ['Caracol'],
+    iptvIds: ['CaracolTV.co', 'CaracolTV2.co', 'CaracolTV.us', 'CaracolInternacional.co'],
+    titleFallbacks: ['Caracol TV', 'Caracol Television', 'caracoltv', 'caracol'],
+  },
+  {
+    id: 'telemundo',
+    name: 'Telemundo',
+    category: 'Sports',
+    iptvIds: ['TelemundoInternacional.us', 'TelemundoAlDia.us'],
+    titleFallbacks: ['Telemundo'],
+  },
+  {
+    id: 'tv-publica',
+    name: 'TV Pública Argentina',
+    category: 'Sports',
+    iptvIds: ['TVPublica.ar'],
+    titleFallbacks: ['TV Publica', 'Television Publica'],
   },
 ];
 

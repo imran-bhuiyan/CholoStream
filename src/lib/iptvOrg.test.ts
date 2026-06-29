@@ -120,7 +120,7 @@ describe('probeStreamUrl', () => {
     expect(result1).toBe(true);
     expect(global.fetch).toHaveBeenCalledTimes(1);
 
-    // Advance time by 5 minutes (within the 10 min TTL)
+    // Advance time by 5 minutes (within the 15 min TTL)
     vi.advanceTimersByTime(5 * 60 * 1000);
 
     // Second call, should use cache
@@ -139,8 +139,8 @@ describe('probeStreamUrl', () => {
     await probeStreamUrl(mockUrl);
     expect(global.fetch).toHaveBeenCalledTimes(1);
 
-    // Advance time by 11 minutes (exceeds 10 min TTL)
-    vi.advanceTimersByTime(11 * 60 * 1000);
+    // Advance time by 16 minutes (exceeds the 15 min TTL)
+    vi.advanceTimersByTime(16 * 60 * 1000);
 
     // Second call
     await probeStreamUrl(mockUrl);

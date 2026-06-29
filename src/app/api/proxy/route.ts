@@ -6,7 +6,7 @@ import ipaddr from 'ipaddr.js';
 // Simple in-memory rate limiter
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT_WINDOW_MS = 60_000;
-const RATE_LIMIT_MAX = 30;
+const RATE_LIMIT_MAX = 120; // 30 was too low for normal HLS sessions (manifest + segments)
 
 function checkRateLimit(ip: string): boolean {
   const now = Date.now();
@@ -115,7 +115,7 @@ function getCorsHeaders(request: NextRequest): Record<string, string> {
   return headers;
 }
 
-const STREAM_FETCH_TIMEOUT_MS = 15000;
+const STREAM_FETCH_TIMEOUT_MS = 20000; // 20s — accommodates higher-latency CDNs (e.g. Caracol TV)
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
   // Next.js 16 changed the request object, 'ip' is removed from NextRequest directly.

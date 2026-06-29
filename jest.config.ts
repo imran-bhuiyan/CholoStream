@@ -6,7 +6,7 @@ const createJestConfig = nextJest({
 });
 
 // Add any custom config to be passed to Jest
-const config = {
+const config: any = {
   coverageProvider: 'v8' as const,
   testEnvironment: 'jsdom',
   // Add more setup options before each test is run

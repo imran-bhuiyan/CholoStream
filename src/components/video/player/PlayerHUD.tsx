@@ -64,8 +64,8 @@ export function PlayerHUD({
           </span>
 
           {useProxy && (
-            <span className="px-2.5 py-0.5 bg-violet-500/20 text-violet-300 border border-violet-500/30 rounded-full text-[10px] font-bold flex items-center">
-              <Globe className="h-3 w-3 mr-1 text-violet-400" />
+            <span className="px-2.5 py-0.5 bg-secondary-fixed/20 text-secondary-fixed border border-secondary-fixed/30 rounded-full text-[10px] font-bold flex items-center">
+              <Globe className="h-3 w-3 mr-1" />
               Proxy Active
             </span>
           )}
@@ -85,7 +85,7 @@ export function PlayerHUD({
         <div className="flex items-center space-x-4">
           <button
             onClick={togglePlay}
-            className="text-white hover:text-violet-400 p-1.5 rounded-lg hover:bg-slate-800/40 transition-colors"
+            className="text-white hover:text-secondary-fixed p-1.5 rounded-lg hover:bg-white/10 transition-colors"
             aria-label={isPlaying ? 'Pause stream' : 'Play stream'}
           >
             {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5 fill-current" />}
@@ -107,7 +107,7 @@ export function PlayerHUD({
               step="0.05"
               value={isMuted ? 0 : volume}
               onChange={handleVolumeChange}
-              className="w-16 md:w-24 h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-violet-600 focus:outline-none"
+              className="w-16 md:w-24 h-1 bg-surface-container-highest rounded-lg appearance-none cursor-pointer accent-secondary-fixed focus:outline-none"
             />
           </div>
 
@@ -134,8 +134,8 @@ export function PlayerHUD({
             }}
             className={`p-1.5 rounded-lg transition-colors duration-200 flex items-center justify-center ${
               useProxy
-                ? 'text-violet-400 bg-violet-500/10 border border-violet-500/20 hover:bg-violet-500/20'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800/40'
+                ? 'text-secondary-fixed bg-secondary-fixed/10 border border-secondary-fixed/20 hover:bg-secondary-fixed/20'
+                : 'text-on-surface-variant hover:text-on-surface hover:bg-white/10'
             }`}
             title={useProxy ? "CORS Proxy: Enabled" : "CORS Proxy: Disabled (Direct)"}
           >

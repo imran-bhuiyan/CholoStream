@@ -29,8 +29,8 @@ const CACHE_TTL_MS = 60 * 60 * 1000;
 // Stream health probe cache — avoids re-probing the same URL within 10 min
 // ---------------------------------------------------------------------------
 const probeCache = new Map<string, { alive: boolean; probedAt: number }>();
-const PROBE_CACHE_TTL_MS = 10 * 60 * 1000;
-const PROBE_TIMEOUT_MS = 4000;
+const PROBE_CACHE_TTL_MS = 15 * 60 * 1000; // 15 min — longer to avoid hammering slow CDNs
+const PROBE_TIMEOUT_MS = 6000; // 6 s — Caracol TV CDN can be slow to respond
 
 /**
  * Lightweight HEAD probe to check if a stream URL is reachable (HTTP 200).
@@ -94,6 +94,27 @@ export function clearProbeCache(): void {
   probeCache.clear();
 }
 
+// ---------------------------------------------------------------------------
+// Fetch with retry — up to 3 attempts with 500ms back-off.
+// Prevents a transient iptv-org blip from failing the entire channel list.
+// ---------------------------------------------------------------------------
+async function fetchWithRetry(url: string, options?: RequestInit, attempts = 3): Promise<Response> {
+  let lastError: unknown;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const res = await fetch(url, options);
+      if (res.ok) return res;
+      lastError = new Error(`HTTP ${res.status} from ${url}`);
+    } catch (err) {
+      lastError = err;
+    }
+    if (i < attempts - 1) {
+      await new Promise((resolve) => setTimeout(resolve, 500 * (i + 1)));
+    }
+  }
+  throw lastError;
+}
+
 async function loadIptvData(): Promise<IptvCache> {
   if (cache && Date.now() - cache.fetchedAt < CACHE_TTL_MS) {
     return cache;
@@ -110,8 +131,8 @@ async function loadIptvData(): Promise<IptvCache> {
   const streams: IptvStream[] = [];
   const logos = new Map<string, string>();
 
-  const streamReq = fetch(IPTV_STREAMS_URL, { cache: 'no-store' }).then(r => r.json() as Promise<IptvStream[]>);
-  const logosReq = fetch(IPTV_LOGOS_URL, { cache: 'no-store' }).then(r => r.json() as Promise<IptvLogo[]>);
+  const streamReq = fetchWithRetry(IPTV_STREAMS_URL, { cache: 'no-store' }).then(r => r.json() as Promise<IptvStream[]>);
+  const logosReq = fetchWithRetry(IPTV_LOGOS_URL, { cache: 'no-store' }).then(r => r.json() as Promise<IptvLogo[]>);
 
   const [allStreams, allLogos] = await Promise.all([streamReq, logosReq]);
 
@@ -198,7 +219,7 @@ function scoreStream(stream: IptvStream): number {
   return score;
 }
 
-const MAX_CANDIDATES_PER_CHANNEL = 6;
+const MAX_CANDIDATES_PER_CHANNEL = 8; // More candidates = more fallback resilience
 
 function resolveStreamsForIds(
   streams: IptvStream[],
@@ -288,18 +309,14 @@ export async function buildChannelsFromIptvOrg(): Promise<Channel[]> {
     const rawSources = resolveStreamsForIds(streams, entry.iptvIds, entry.titleFallbacks);
     const logoUrl = resolveLogo(logos, entry.iptvIds);
 
-    // Probe each candidate and keep only reachable ones
-    const liveSources = await filterLiveSources(rawSources);
-
     return {
       id: entry.id,
       name: entry.name,
       category: entry.category,
       logoUrl: logoUrl ?? '',
-      sources: liveSources,
+      sources: rawSources,
     };
   });
 
-  // Resolve all channel probes concurrently
   return Promise.all(channelPromises);
 }

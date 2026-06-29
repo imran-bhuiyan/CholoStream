@@ -26,7 +26,7 @@ export function PlayerLogs({
           onClick={() => setLogCollapsed(!logCollapsed)}
           className="flex items-center space-x-2 text-slate-350 hover:text-white transition-colors"
         >
-          <Activity className="h-4 w-4 text-violet-500" />
+          <Activity className="h-4 w-4 text-secondary-fixed" />
           <h4 className="text-xs font-bold uppercase tracking-wider">Stream Telemetry & logs</h4>
           {logCollapsed ? <ChevronDown className="h-3 w-3 text-slate-500" /> : <ChevronUp className="h-3 w-3 text-slate-500" />}
         </button>

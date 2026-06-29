@@ -28,7 +28,8 @@ export function useChannels() {
   return useQuery({
     queryKey: ['channels'],
     queryFn: fetchChannels,
-    staleTime: 60 * 60 * 1000,
-    gcTime: 2 * 60 * 60 * 1000,
+    staleTime: 10 * 1000,
+    gcTime: 30 * 1000,
+    refetchOnWindowFocus: true,
   });
 }

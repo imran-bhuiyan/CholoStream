@@ -1,9 +1,21 @@
 import type { Metadata } from "next";
+import { Anton, Archivo_Narrow } from "next/font/google";
 import "./globals.css";
 
+const anton = Anton({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-anton",
+});
+
+const archivoNarrow = Archivo_Narrow({
+  subsets: ["latin"],
+  variable: "--font-archivo-narrow",
+});
+
 export const metadata: Metadata = {
-  title: "CholoStream | Live Sports & TV Streaming Dashboard",
-  description: "CholoStream — Stream live IPTV channels, watch the FIFA World Cup 2026, track scores, and view match schedules.",
+  title: "CholoStream · Live World Cup 2026",
+  description: "Stream live FIFA World Cup 2026 — every match, every goal, in ultra-high definition on CholoStream.",
 };
 
 import QueryProvider from "@/providers/QueryProvider";
@@ -17,9 +29,9 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className="h-full antialiased"
+      className={`h-full antialiased dark ${anton.variable} ${archivoNarrow.variable}`}
     >
-      <body className="min-h-full flex flex-col bg-[#06070a] text-slate-100">
+      <body className="min-h-full flex flex-col bg-background text-on-background selection:bg-secondary-fixed selection:text-on-secondary-fixed">
         <ErrorBoundary>
           <QueryProvider>{children}</QueryProvider>
         </ErrorBoundary>

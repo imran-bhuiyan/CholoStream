@@ -58,12 +58,21 @@ export function usePlayerDiagnostics({
       }
     };
 
-    // 2. Playback Stalling Listeners
+    // 2. Playback Stalling Listeners (Debounced to prevent false-positives during initial load)
+    let stallTimeout: NodeJS.Timeout | null = null;
+
     const handleStalledEvent = () => {
-      setIsStalled(true);
+      if (stallTimeout) clearTimeout(stallTimeout);
+      stallTimeout = setTimeout(() => {
+        setIsStalled(true);
+      }, 5000); // 5s threshold
     };
 
     const handlePlayingEvent = () => {
+      if (stallTimeout) {
+        clearTimeout(stallTimeout);
+        stallTimeout = null;
+      }
       setIsStalled(false);
     };
 
@@ -71,6 +80,8 @@ export function usePlayerDiagnostics({
     video.addEventListener('stalled', handleStalledEvent);
     video.addEventListener('waiting', handleStalledEvent);
     video.addEventListener('playing', handlePlayingEvent);
+    video.addEventListener('pause', handlePlayingEvent);
+    video.addEventListener('ended', handlePlayingEvent);
 
     // 3. Telemetry Codec Monitor Loop (especially for HEVC)
     if (checkIntervalRef.current) {
@@ -128,6 +139,12 @@ export function usePlayerDiagnostics({
       video.removeEventListener('stalled', handleStalledEvent);
       video.removeEventListener('waiting', handleStalledEvent);
       video.removeEventListener('playing', handlePlayingEvent);
+      video.removeEventListener('pause', handlePlayingEvent);
+      video.removeEventListener('ended', handlePlayingEvent);
+      
+      if (stallTimeout) {
+        clearTimeout(stallTimeout);
+      }
       
       if (checkIntervalRef.current) {
         clearInterval(checkIntervalRef.current);

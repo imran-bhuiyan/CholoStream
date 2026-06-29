@@ -31,7 +31,7 @@ export default function UnifiedPlayer({ sources, channelName, onAllSourcesExhaus
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [alertMessage, setAlertMessage] = useState<string | null>(null);
   const [playerError, setPlayerError] = useState<string | null>(null);
-  const [logCollapsed, setLogCollapsed] = useState(false);
+  const [logCollapsed, setLogCollapsed] = useState(true);
 
   // Dynamic libraries references
   const hlsRef = useRef<Hls | null>(null);
@@ -118,7 +118,9 @@ export default function UnifiedPlayer({ sources, channelName, onAllSourcesExhaus
     handleMpegtsAudioFallback,
     setIsPlaying: controls.setIsPlaying,
     hlsRef,
-    mpegtsRef
+    mpegtsRef,
+    isMuted: controls.isMuted,
+    setIsMuted: controls.setIsMuted
   });
 
   // HUD controls interactions
@@ -160,7 +162,7 @@ export default function UnifiedPlayer({ sources, channelName, onAllSourcesExhaus
                 setHasAudioState(true);
                 addLog('Manual player reload requested.', 'info');
               }}
-              className="flex items-center space-x-2 px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg transition-colors font-medium text-sm shadow-lg shadow-violet-600/30"
+              className="flex items-center space-x-2 px-4 py-2 bg-secondary-fixed hover:bg-secondary-fixed-dim text-on-secondary-fixed rounded-lg transition-colors font-medium text-sm shadow-lg shadow-secondary-fixed/30"
             >
               <RefreshCw className="h-4 w-4" />
               <span>Retry Stream</span>
@@ -172,6 +174,8 @@ export default function UnifiedPlayer({ sources, channelName, onAllSourcesExhaus
               ref={videoRef}
               className="w-full h-full object-contain"
               playsInline
+              autoPlay
+              muted
               onClick={controls.togglePlay}
             />
 
@@ -208,14 +212,6 @@ export default function UnifiedPlayer({ sources, channelName, onAllSourcesExhaus
         )}
       </div>
 
-      <PlayerLogs
-        logs={logs}
-        logCollapsed={logCollapsed}
-        setLogCollapsed={setLogCollapsed}
-        setLogs={setLogs}
-        currentSourceIndex={currentSourceIndex}
-        totalSources={sources.length}
-      />
     </div>
   );
 }

@@ -23,9 +23,9 @@ function CategoryFallbackIcon({
 
   switch (category) {
     case 'Sports':
-      return <Award width={dim} height={dim} className={`${iconClass} text-violet-400`} />;
+      return <Award width={dim} height={dim} className={`${iconClass} text-secondary-fixed`} />;
     case 'News':
-      return <Radio width={dim} height={dim} className={`${iconClass} text-blue-400`} />;
+      return <Radio width={dim} height={dim} className={`${iconClass} text-sky-400`} />;
     case 'Entertainment':
       return <Film width={dim} height={dim} className={`${iconClass} text-emerald-400`} />;
     case 'International':
@@ -41,7 +41,7 @@ export default function ChannelLogo({ channel, size = 36, className = '' }: Chan
 
   return (
     <div
-      className={`flex items-center justify-center overflow-hidden bg-[#1a1f2b] border border-slate-800 ${className}`}
+      className={`flex items-center justify-center overflow-hidden bg-surface-container border border-outline-variant ${className}`}
       style={{ width: size, height: size }}
     >
       {showImage ? (

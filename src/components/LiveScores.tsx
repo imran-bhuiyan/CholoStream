@@ -15,60 +15,60 @@ interface LiveScoresProps {
 // Dynamically resolve team flags
 export const getTeamFlag = (teamName: string) => {
   const countryCodes: Record<string, string> = {
-    'Argentina': 'AR',
-    'Algeria': 'DZ',
-    'Australia': 'AU',
-    'Austria': 'AT',
-    'Belgium': 'BE',
-    'Bosnia and Herzegovina': 'BA',
-    'Brazil': 'BR',
-    'Cabo Verde': 'CV',
-    'Canada': 'CA',
-    'Colombia': 'CO',
-    'DR Congo': 'CD',
-    'Congo DR': 'CD',
-    "Côte d'Ivoire": 'CI',
-    "Cote d'Ivoire": 'CI',
-    'Croatia': 'HR',
-    'Curaçao': 'CW',
-    'Curacao': 'CW',
-    'Czechia': 'CZ',
-    'Ecuador': 'EC',
-    'Egypt': 'EG',
-    'England': 'GB-ENG',
-    'France': 'FR',
-    'Germany': 'DE',
-    'Ghana': 'GH',
-    'Haiti': 'HT',
-    'IR Iran': 'IR',
-    'Iraq': 'IQ',
-    'Japan': 'JP',
-    'Jordan': 'JO',
-    'Korea Republic': 'KR',
-    'Mexico': 'MX',
-    'Morocco': 'MA',
-    'Netherlands': 'NL',
-    'New Zealand': 'NZ',
-    'Norway': 'NO',
-    'Panama': 'PA',
-    'Paraguay': 'PY',
-    'Portugal': 'PT',
-    'Qatar': 'QA',
-    'Saudi Arabia': 'SA',
-    'Scotland': 'GB-SCT',
-    'Senegal': 'SN',
-    'South Africa': 'ZA',
-    'Spain': 'ES',
-    'Sweden': 'SE',
-    'Switzerland': 'CH',
-    'Tunisia': 'TN',
-    'Türkiye': 'TR',
-    'Uruguay': 'UY',
-    'Uzbekistan': 'UZ',
-    'USA': 'US',
+    'Argentina': 'ar',
+    'Algeria': 'dz',
+    'Australia': 'au',
+    'Austria': 'at',
+    'Belgium': 'be',
+    'Bosnia and Herzegovina': 'ba',
+    'Brazil': 'br',
+    'Cabo Verde': 'cv',
+    'Canada': 'ca',
+    'Colombia': 'co',
+    'DR Congo': 'cd',
+    'Congo DR': 'cd',
+    "Côte d'Ivoire": 'ci',
+    "Cote d'Ivoire": 'ci',
+    'Croatia': 'hr',
+    'Curaçao': 'cw',
+    'Curacao': 'cw',
+    'Czechia': 'cz',
+    'Ecuador': 'ec',
+    'Egypt': 'eg',
+    'England': 'gb-eng',
+    'France': 'fr',
+    'Germany': 'de',
+    'Ghana': 'gh',
+    'Haiti': 'ht',
+    'IR Iran': 'ir',
+    'Iraq': 'iq',
+    'Japan': 'jp',
+    'Jordan': 'jo',
+    'Korea Republic': 'kr',
+    'Mexico': 'mx',
+    'Morocco': 'ma',
+    'Netherlands': 'nl',
+    'New Zealand': 'nz',
+    'Norway': 'no',
+    'Panama': 'pa',
+    'Paraguay': 'py',
+    'Portugal': 'pt',
+    'Qatar': 'qa',
+    'Saudi Arabia': 'sa',
+    'Scotland': 'gb-sct',
+    'Senegal': 'sn',
+    'South Africa': 'za',
+    'Spain': 'es',
+    'Sweden': 'se',
+    'Switzerland': 'ch',
+    'Tunisia': 'tn',
+    'Türkiye': 'tr',
+    'Uruguay': 'uy',
+    'Uzbekistan': 'uz',
+    'USA': 'us',
   };
-  const code = countryCodes[teamName] || 'UN';
-  return `https://flagsapi.com/${code}/flat/64.png`;
+  const code = countryCodes[teamName] || 'un';
+  return `https://flagcdn.com/w80/${code}.png`;
 };
 
 export default function LiveScores({ matches, channels, onSelectChannel }: LiveScoresProps) {
@@ -113,20 +113,20 @@ export default function LiveScores({ matches, channels, onSelectChannel }: LiveS
     <div
       key={match.id}
       onClick={() => match.channelId && onSelectChannel(match.channelId)}
-      className={`group relative bg-[#151821] border border-white/5 rounded-2xl p-4 transition-all duration-300 overflow-hidden ${
+      className={`group relative glass-panel rounded-xl p-4 transition-all duration-300 overflow-hidden shimmer-hover animate-fade-in-up border border-white/5 ${
         match.channelId
-          ? 'cursor-pointer hover:border-white/10 hover:shadow-2xl hover:-translate-y-1'
+          ? 'cursor-pointer hover:border-secondary-fixed/40 hover:shadow-[0_0_20px_rgba(195,244,0,0.12)] hover:-translate-y-0.5'
           : 'cursor-default'
       }`}
     >
       <div className="flex items-center justify-between mb-3">
         <span
-          className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-md border ${
+          className={`font-label-caps text-[10px] px-2.5 py-0.5 rounded border ${
             match.status === 'LIVE'
-              ? 'bg-rose-500/10 text-rose-400 border-rose-500/20 animate-pulse'
+              ? 'bg-error-container text-error border-error/20 animate-pulse'
               : match.status === 'FINISHED'
-                ? 'bg-slate-800/40 text-slate-300 border-slate-700'
-                : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                ? 'bg-surface-container text-on-surface border-outline'
+                : 'bg-secondary-fixed/10 text-secondary-fixed border-secondary-fixed/20'
           }`}
         >
           {match.status === 'LIVE' ? 'LIVE' : match.status === 'FINISHED' ? 'FT' : match.time}
@@ -141,6 +141,7 @@ export default function LiveScores({ matches, channels, onSelectChannel }: LiveS
             alt={match.homeTeam}
             width={40}
             height={40}
+            unoptimized
             className="w-10 h-10 object-contain drop-shadow-md mb-1.5 transition-transform duration-200 group-hover:scale-110"
           />
           <span className="text-xs font-semibold text-slate-300 truncate w-full">
@@ -151,11 +152,11 @@ export default function LiveScores({ matches, channels, onSelectChannel }: LiveS
         <div className="flex items-center space-x-3 bg-slate-900/60 px-3 py-1.5 rounded-xl border border-slate-800/60 min-w-[72px] justify-center">
           {showScore && match.score ? (
             <>
-              <span className="text-lg font-extrabold font-mono text-slate-100">
+              <span className="font-stats-number text-stats-number text-on-surface">
                 {match.score.home}
               </span>
               <span className="text-xs text-slate-650 font-bold">-</span>
-              <span className="text-lg font-extrabold font-mono text-slate-100">
+              <span className="font-stats-number text-stats-number text-on-surface">
                 {match.score.away}
               </span>
             </>
@@ -170,6 +171,7 @@ export default function LiveScores({ matches, channels, onSelectChannel }: LiveS
             alt={match.awayTeam}
             width={40}
             height={40}
+            unoptimized
             className="w-10 h-10 object-contain drop-shadow-md mb-1.5 transition-transform duration-200 group-hover:scale-110"
           />
           <span className="text-xs font-semibold text-slate-300 truncate w-full">
@@ -181,7 +183,7 @@ export default function LiveScores({ matches, channels, onSelectChannel }: LiveS
       <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-850 text-xs text-slate-500">
         <div className="flex items-center space-x-1.5 truncate">
           {showScore ? (
-            <CalendarDays className="h-3.5 w-3.5 text-violet-400/80 flex-shrink-0" />
+            <CalendarDays className="h-3.5 w-3.5 text-secondary-fixed/80 flex-shrink-0" />
           ) : (
             <Clock className="h-3.5 w-3.5 text-amber-400/80 flex-shrink-0" />
           )}
@@ -191,7 +193,7 @@ export default function LiveScores({ matches, channels, onSelectChannel }: LiveS
         </div>
 
         {match.channelId && (
-          <div className="flex items-center space-x-1 text-violet-400 font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="flex items-center space-x-1 text-secondary-fixed font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
             <span>Watch</span>
             <PlayCircle className="h-4 w-4" />
           </div>

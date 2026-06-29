@@ -26,7 +26,7 @@ describe('GET /api/channels', () => {
 
     // Assert cache headers
     const cacheControl = response.headers.get('Cache-Control');
-    expect(cacheControl).toBe('public, s-maxage=3600, stale-while-revalidate=86400');
+    expect(cacheControl).toBe('s-maxage=120, stale-while-revalidate=300');
 
     // Assert JSON body
     const json = await response.json();

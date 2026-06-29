@@ -16,9 +16,31 @@ export function usePlayerControls({
 }: UsePlayerControlsProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(1);
-  const [isMuted, setIsMuted] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(true);
+
+  // Load preferences from localStorage on mount
+  useEffect(() => {
+    try {
+      const storedMuted = localStorage.getItem('cholostream_muted');
+      const storedVolume = localStorage.getItem('cholostream_volume');
+      
+      const initialMute = storedMuted ? storedMuted === 'true' : true;
+      const initialVolume = storedVolume ? parseFloat(storedVolume) : 1.0;
+      
+      setIsMuted(initialMute);
+      setVolume(initialVolume);
+      
+      const video = videoRef.current;
+      if (video) {
+        video.muted = initialMute;
+        video.volume = initialVolume;
+      }
+    } catch {
+      // safe fallback
+    }
+  }, [videoRef]);
 
   const togglePlay = useCallback(() => {
     const video = videoRef.current;
@@ -66,6 +88,12 @@ export function usePlayerControls({
     }
     setVolume(val);
     setIsMuted(val === 0);
+    try {
+      localStorage.setItem('cholostream_volume', String(val));
+      localStorage.setItem('cholostream_muted', String(val === 0));
+    } catch {
+      // safe fallback
+    }
   }, [mpegtsRef, videoRef]);
 
   const toggleMute = useCallback(() => {
@@ -78,6 +106,11 @@ export function usePlayerControls({
       mpegtsRef.current.muted = nextMute;
     }
     setIsMuted(nextMute);
+    try {
+      localStorage.setItem('cholostream_muted', String(nextMute));
+    } catch {
+      // safe fallback
+    }
     addLog(nextMute ? 'Muted.' : 'Unmuted.', 'info');
   }, [isMuted, addLog, mpegtsRef, videoRef]);
 
@@ -140,6 +173,7 @@ export function usePlayerControls({
     setIsPlaying,
     volume,
     isMuted,
+    setIsMuted,
     isFullscreen,
     showControls,
     setShowControls,

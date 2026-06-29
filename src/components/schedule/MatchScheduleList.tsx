@@ -38,6 +38,7 @@ export default function MatchScheduleList({
     });
   }, [matches, searchQuery, statusFilter]);
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const rowVirtualizer = useVirtualizer({
     count: filteredMatches.length,
     getScrollElement: () => parentRef.current,
@@ -90,12 +91,12 @@ export default function MatchScheduleList({
       {/* Header and Filter Tabs */}
       <div className="flex flex-col gap-3 pb-3 border-b border-slate-800/80">
         <div className="flex items-center space-x-2 text-slate-200">
-          <Calendar className="h-4.5 w-4.5 text-violet-500" />
+          <Calendar className="h-4.5 w-4.5 text-secondary-fixed" />
           <h3 className="text-xs font-bold uppercase tracking-wider">World Cup 2026 Schedule</h3>
         </div>
 
         {/* Filters */}
-        <div className="flex bg-[#121620] p-1 rounded-xl border border-slate-800/80 overflow-x-auto scrollbar-none">
+        <div className="flex bg-surface-container p-1 rounded-xl border border-outline-variant overflow-x-auto scrollbar-none">
           {(['ALL', 'LIVE', 'UPCOMING', 'FINISHED'] as const).map(filter => (
             <button
               key={filter}
@@ -103,8 +104,8 @@ export default function MatchScheduleList({
               className={`
                 flex-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all duration-150 whitespace-nowrap
                 ${statusFilter === filter 
-                  ? 'bg-violet-650 text-white shadow-md' 
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-secondary-fixed text-on-secondary-fixed shadow-md' 
+                  : 'text-on-surface-variant hover:text-on-surface'
                 }
               `}
             >
@@ -122,18 +123,19 @@ export default function MatchScheduleList({
           placeholder="Filter matches..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full bg-[#121620]/60 border border-slate-850 rounded-xl py-2 pl-9 pr-4 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-violet-500/30"
+          className="w-full bg-surface-container/60 border border-outline-variant rounded-xl py-2 pl-9 pr-4 text-sm text-on-surface placeholder-on-surface-variant focus:outline-none focus:border-secondary-fixed/50 transition-colors"
         />
       </div>
 
       <div 
         ref={parentRef}
-        className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent rounded-xl border border-white/5 bg-[#11131a] min-h-0 mt-2"
+        className="flex-1 overflow-y-auto no-scrollbar rounded-xl min-h-0 mt-2"
+        style={{ height: '400px' }}
       >
         {filteredMatches.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center py-12">
-            <AlertCircle className="h-8 w-8 text-slate-700 mb-2" />
-            <p className="text-xs text-slate-500 font-semibold">No scheduled items matching filter</p>
+            <AlertCircle className="h-8 w-8 text-on-surface-variant mb-2 opacity-40" />
+            <p className="text-sm text-on-surface-variant font-semibold">No scheduled items matching filter</p>
           </div>
         ) : (
           <div
@@ -158,60 +160,62 @@ export default function MatchScheduleList({
                     height: `${virtualRow.size}px`,
                     transform: `translateY(${virtualRow.start}px)`,
                   }}
-                  className="px-4 py-2.5 flex items-center justify-between hover:bg-[#121620]/30 border-b border-slate-850/60 transition-colors duration-150"
+                  className="px-4 flex items-center hover:bg-white/5 border-b border-white/5 transition-colors duration-150"
                 >
-                  <div className="flex items-center space-x-3 min-w-0 flex-1">
-                    {/* Status Badge */}
-                    <div className="w-20 flex-shrink-0">
-                      {getStatusBadge(match.status)}
-                    </div>
-
-                    {/* Match detail matchup */}
-                    <div className="flex flex-col truncate min-w-0">
-                      <div className="flex items-center space-x-1.5 truncate">
-                        <Image src={getTeamFlag(match.homeTeam)} alt={match.homeTeam} width={16} height={16} className="w-4 h-4 object-contain" />
-                        <span className="text-xs font-semibold text-slate-350 truncate">{match.homeTeam}</span>
+                  <div className="w-full flex items-center justify-between animate-fade-in-up py-3">
+                    <div className="flex items-center space-x-3 min-w-0 flex-1">
+                      {/* Status Badge */}
+                      <div className="w-20 flex-shrink-0">
+                        {getStatusBadge(match.status)}
                       </div>
-                      <div className="flex items-center space-x-1.5 truncate mt-1">
-                        <Image src={getTeamFlag(match.awayTeam)} alt={match.awayTeam} width={16} height={16} className="w-4 h-4 object-contain" />
-                        <span className="text-xs font-semibold text-slate-355 truncate">{match.awayTeam}</span>
-                      </div>
-                      <span className="text-[9px] font-semibold text-slate-600 truncate mt-1">
-                        {match.group} · {match.venue}
-                      </span>
-                    </div>
-                  </div>
 
-                  {/* Actions / Scores details */}
-                  <div className="flex items-center space-x-4">
-                    <div className="text-right min-w-[60px]">
-                      {match.status === 'LIVE' || match.status === 'FINISHED' ? (
-                        <span className="font-mono text-xs font-bold text-slate-200 bg-slate-900/60 border border-slate-800 px-2 py-1 rounded">
-                          {match.score?.home ?? 0} - {match.score?.away ?? 0}
-                        </span>
-                      ) : (
-                        <div className="flex flex-col items-end">
-                          <span className="text-[10px] font-bold text-slate-500 font-mono">
-                            {match.date?.slice(5).replace('-', '/')}
-                          </span>
-                          <span className="text-[10px] font-bold text-slate-400 font-mono">
-                            {match.time}
-                          </span>
+                      {/* Match detail matchup */}
+                      <div className="flex flex-col truncate min-w-0">
+                        <div className="flex items-center space-x-1.5 truncate">
+                          <Image src={getTeamFlag(match.homeTeam)} alt={match.homeTeam} width={16} height={16} unoptimized className="w-4 h-4 object-contain" />
+                          <span className="text-sm font-semibold text-on-surface truncate">{match.homeTeam}</span>
                         </div>
+                        <div className="flex items-center space-x-1.5 truncate mt-1">
+                          <Image src={getTeamFlag(match.awayTeam)} alt={match.awayTeam} width={16} height={16} unoptimized className="w-4 h-4 object-contain" />
+                          <span className="text-sm font-semibold text-on-surface truncate">{match.awayTeam}</span>
+                        </div>
+                        <span className="text-[10px] font-semibold text-on-surface-variant truncate mt-1.5">
+                          {match.group} · {match.venue}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Actions / Scores details */}
+                    <div className="flex items-center space-x-4">
+                      <div className="text-right min-w-[65px]">
+                        {match.status === 'LIVE' || match.status === 'FINISHED' ? (
+                          <span className="font-stats-number text-xs font-bold text-on-surface bg-surface-container border border-outline-variant px-2.5 py-1 rounded">
+                            {match.score?.home ?? 0} - {match.score?.away ?? 0}
+                          </span>
+                        ) : (
+                          <div className="flex flex-col items-end">
+                            <span className="text-[10px] font-bold text-on-surface-variant font-mono">
+                              {match.date?.slice(5).replace('-', '/')}
+                            </span>
+                            <span className="text-[10px] font-bold text-on-surface-variant font-mono">
+                              {match.time}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {match.channelId ? (
+                        <button
+                          onClick={() => onSelectChannel(match.channelId!)}
+                          className="p-2 bg-secondary-fixed/5 hover:bg-secondary-fixed/20 border border-secondary-fixed/20 hover:border-secondary-fixed/40 rounded-lg text-secondary-fixed transition-all flex-shrink-0"
+                          title={`Tune into ${getChannelName(match.channelId)}`}
+                        >
+                          <Play className="h-3.5 w-3.5 fill-current" />
+                        </button>
+                      ) : (
+                        <div className="w-8 h-8 flex-shrink-0" />
                       )}
                     </div>
-
-                    {match.channelId ? (
-                      <button
-                        onClick={() => onSelectChannel(match.channelId!)}
-                        className="p-1.5 hover:bg-violet-600/10 hover:border-violet-500/20 border border-transparent rounded-lg text-slate-400 hover:text-violet-400 transition-colors flex-shrink-0"
-                        title={`Tune into ${getChannelName(match.channelId)}`}
-                      >
-                        <Play className="h-3.5 w-3.5 fill-current" />
-                      </button>
-                    ) : (
-                      <div className="w-7 h-7 flex-shrink-0" />
-                    )}
                   </div>
                 </div>
               );
