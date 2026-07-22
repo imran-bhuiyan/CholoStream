@@ -98,7 +98,15 @@ function getCorsHeaders(request: NextRequest): Record<string, string> {
     try {
       const originUrl = new URL(origin);
       const isLocalhost = originUrl.hostname === 'localhost' || originUrl.hostname === '127.0.0.1';
-      const isVercel = originUrl.hostname.endsWith('.vercel.app');
+
+      const allowedVercelHosts = [
+        process.env.VERCEL_URL,
+        process.env.VERCEL_BRANCH_URL,
+        process.env.VERCEL_PROJECT_PRODUCTION_URL,
+        'cholostream.vercel.app'
+      ].filter(Boolean);
+
+      const isVercel = allowedVercelHosts.includes(originUrl.hostname) || originUrl.hostname.endsWith('.cholostream.vercel.app');
 
       // Also allow if it matches the current host
       const host = request.headers.get('host');
